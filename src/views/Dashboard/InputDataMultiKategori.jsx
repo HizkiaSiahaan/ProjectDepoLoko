@@ -685,7 +685,17 @@ if (kategori === 'actionPlan') {
     return;
   }
   // Mapping ke backend
-  const payload = {
+  // Mapping otomatis PIC berdasarkan detailAktivitas
+const getPic = (detailAktivitas) => {
+  const normalized = (detailAktivitas || '').trim().toLowerCase();
+  const mapping = {};
+  Object.keys(detailAktivitasToPic).forEach(key => {
+    mapping[key.trim().toLowerCase()] = detailAktivitasToPic[key];
+  });
+  return mapping[normalized] || null;
+};
+const pic = getPic(actionPlan.detailAktivitas);
+const payload = {
     nama_pemeriksa: actionPlan.namaPemeriksa,
     tanggal: actionPlan.tanggal ? dayjs(actionPlan.tanggal).format('YYYY-MM-DD') : null,
     nomor_lokomotif: actionPlan.nomorLokomotif,
@@ -693,7 +703,8 @@ if (kategori === 'actionPlan') {
     aktivitas: actionPlan.aktivitas, // lagging indicator
     detail_aktivitas: actionPlan.detailAktivitas, // leading indicator
     target: actionPlan.target,
-    foto_path: actionPlan.foto ? actionPlan.foto.name : null // Simpan nama file jika ada
+    foto_path: actionPlan.foto ? actionPlan.foto.name : null, // Simpan nama file jika ada
+    pic // <--- pastikan field pic selalu dikirim
   };
   try {
     const res = await fetch('/api/action-plan', {

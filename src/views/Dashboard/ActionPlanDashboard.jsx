@@ -90,24 +90,26 @@ function ActionPlanDashboard() {
 
   // Fungsi untuk filter aktivitas tim, harus di dalam komponen agar akses state
   function getTeamActivities(team) {
-    return actionPlanData.filter(row => row.pic === team);
+    // Pastikan filter hanya data dengan PIC valid
+    return actionPlanData.filter(row => row.pic && row.pic === team);
   }
+  
   
   // === PLAN DICTIONARY ===
   const planDict = {
     "Penggantian Slip Ring (Stainless Steel)": 85,
     "Penambahan Brush Holder 1 Set": 50,
     "Pengukuran dan Penggantian Carbon Brush (Standar 42 mm)": 85,
-    "Inspeksi dan Pemeriksaan Motor Blower (Dial & Shaking)": 85,
+    "Inspeksi dan Pemeriksaan Motor Blower Motor Blower (Dial & Shaking)": 85,
     "Penggantian Bearing Setiap 1,5 Tahun": 85,
     "Join Inspection dengan DC THN": 85,
     "21 serie Modifikasi bearing housing kedua sisi": 35,
     "Penggantian Impeler (21 Series) dengan bahan yang lebih ringan": 35,
-    "Flushing Fuel Setiap Perawatan": 85,
+    "Flushing Fuel Setiap 12 Bulan": 66,
     "Drain BBM 1L setiap Perawatan": 85,
     "Pemeriksaan Ring Piston Setiap P3": 85,
-    "Pemeriksaan Piston Cooling Pipe Pada Saat Perawatan Pertama di 2025": 85,
-    "Pemeriksaan & Inspeksi Piston Cooling Pipe & Seal P12": 85,
+    "Pemeriksaan Piston Cooling Pipe Pada Saat Perawatan Pertama di 2025": 36,
+    "Pemeriksaan & Inspeksi Piston Cooling Pipe & Seal P12": 36,
     "Instal Ulang Software IPM P12": 66,
     "Pengecekan kondisi IPM & Test Air Brake": 85,
     "Periksa dan Pembersihan Komponen Internal IPM setiap 3 Tahun": 85,
@@ -153,7 +155,7 @@ function ActionPlanDashboard() {
     "Pemeriksaan Kondisi Turbocharger (Mur, Baut, TPURPM)": 85,
     "Pemeriksaan GAP Clearence Impeler Air Inlet Setiap Perawatan": 85,
     "Pengecekan dan pengukuran Fuel Pump Setiap Perawatan": 85,
-    "Flushing Fuel Setiap Perawatan (FP)": 85,
+    "Flushing Fuel Setiap 12 Bulan (FP)": 66,
     "Pengecekan dan Penggantian Komponen Wiper (Blade, Cup Nut, Baut) setiap Bulan": 85,
     "Setup Langkah Blade setiap Bulan": 85,
     "Pengecekan Semua Komponen Pemasir": 85,
@@ -161,10 +163,9 @@ function ActionPlanDashboard() {
     "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan MPIO": 85,
     "Reload EPCU Software setiap 36 Bulan (MPIO)": 14,
     "Pengecekan Semua Kondisi Relay GR & Koneksinya": 85,
-    "Melakukan Ground Test semua lokomotif saat perawatan": 85,
-    "Melakukan Pengukuran Roda Periode 1 Bulan": 85
-    // ...tambahkan semua leading indicator lain sesuai kebutuhan
+    "Melakukan Ground Test semua lokomotif saat perawatan": 85
   };
+  
 
   // Fetch data dari backend saat mount
   React.useEffect(() => {
@@ -196,7 +197,7 @@ function ActionPlanDashboard() {
           komponen: row.komponen,
           aktivitas: row.aktivitas,
           detail_aktivitas: row.detail_aktivitas,
-          plan: planDict[row.detail_aktivitas] || '-',
+          plan: typeof planDict[row.detail_aktivitas] === 'number' ? planDict[row.detail_aktivitas] : 0,
           actual: 1
         });
       } else {
@@ -206,16 +207,17 @@ function ActionPlanDashboard() {
     return Array.from(map.values());
   }
 
-  const mainTableData = React.useMemo(() => aggregateMainTable(actionPlanData || []), [actionPlanData]);
-
-  // const teamspic = React.useMemo(() => {
-  //   const list = [...new Set(mainTableData.map(d => d.pic).filter(Boolean))];
-  //   if (list.length) return list;
-  //   return [
-  //     'TIM FLYING GANG','TIM REVISI','TIM ELEKTRIK','TIM ENGINE','TIM ANGIN','TIM PRL','TIM SELF TEST','TIM TRUCK'
-  //   ];
-  // }, [mainTableData]);
-
+  // Hanya data dengan PIC valid yang dihitung performa tim
+// Debug: log data action plan dan hasil agregasi
+debugger;
+console.log('actionPlanData:', actionPlanData);
+const filteredActionPlanData = (actionPlanData || []).filter(row => row.pic && row.pic !== '');
+console.log('filteredActionPlanData:', filteredActionPlanData);
+const mainTableData = React.useMemo(
+  () => aggregateMainTable(filteredActionPlanData),
+  [actionPlanData]
+);
+console.log('mainTableData:', mainTableData);
   
   const getTeamStats = (teamName) => {
     const rows = mainTableData.filter(d => d.pic === teamName);
