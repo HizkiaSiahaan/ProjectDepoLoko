@@ -15,6 +15,7 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'; // ✅ Fault icon
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined'; // ✅ Component Usage icon
 import CopyrightOutlinedIcon from '@mui/icons-material/CopyrightOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'; // ✅ Task Management icon
 
 
 const icons = {
@@ -30,12 +31,17 @@ const icons = {
   HelpOutlineOutlinedIcon,
   LogoutOutlinedIcon,
   WarningAmberOutlinedIcon,
-  ListAltOutlinedIcon, // ✅ daftarkan icon baru
-  CopyrightOutlinedIcon
+  ListAltOutlinedIcon, // daftarkan icon baru
+  CopyrightOutlinedIcon,
+  AssignmentOutlinedIcon
 };
 
-export default {
-  items: [
+
+// Fungsi untuk filter menu sesuai role
+function getMenuItemsByRole(role = 'user') {
+  // role: 'admin' atau 'user', default 'user'
+  // Definisi semua menu
+  const items = [
     {
       id: 'main',
       type: 'group',
@@ -96,6 +102,22 @@ export default {
           icon: icons['AssessmentOutlinedIcon'],
           url: '/dashboard/performance-history'
         },
+        // Task Management (Admin) hanya untuk admin
+        ...(role === 'admin' ? [{
+          id: 'task-management-admin',
+          title: 'Manajemen Task',
+          type: 'item',
+          icon: icons['AssignmentOutlinedIcon'],
+          url: '/dashboard/task-management-admin'
+        }] : []),
+        // Task Management User selalu ada
+        {
+          id: 'task-management-user',
+          title: 'Daftar Task',
+          type: 'item',
+          icon: icons['AssignmentOutlinedIcon'],
+          url: '/dashboard/task-management-user'
+        },
         {
           id: 'input-data',
           title: 'Input Data Multi-Kategori',
@@ -104,15 +126,8 @@ export default {
           url: '/dashboard/input-data-multi-kategori'
         },
         {
-          id: 'account',
-          title: 'Account',
-          type: 'item',
-          icon: icons['AccountCircleOutlinedIcon'],
-          url: '/account'
-        },
-        {
           id: 'copyright',
-          title: '2025 KAI Divre IV',
+          title: 'TIM KP ITERA',
           type: 'item',
           icon: icons['CopyrightOutlinedIcon'],
           url: '#',
@@ -126,5 +141,8 @@ export default {
         }
       ]
     }
-  ]
-};
+  ];
+  return { items };
+}
+
+export default getMenuItemsByRole;

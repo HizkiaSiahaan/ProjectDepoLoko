@@ -1,16 +1,16 @@
-import React from 'react';
-
-// material-ui
-import { Typography } from '@mui/material';
-
 // project import
+import React from 'react';
+import { useSelector } from 'react-redux';
 import NavGroup from './NavGroup';
-import menuItem from 'menu-items';
+import getMenuItemsByRole from 'menu-items';
 
 // ==============================|| MENULIST ||============================== //
 
 const MenuList = () => {
-  const navItems = menuItem.items.map((item) => {
+  const role = useSelector(state => state.auth.user?.role) || 'user';
+  const { items } = getMenuItemsByRole(role);
+
+  const navItems = items.map((item) => {
     switch (item.type) {
       case 'group':
         return <NavGroup key={item.id} item={item} />;

@@ -1,6 +1,5 @@
-// controllers/faultHistoryController.js
+// controllers/faultHistoryController.js - UPDATED for locomotive_number schema
 const FaultHistory = require('../models/FaultHistory');
-const Locomotive = require('../models/Locomotive');
 
 class FaultHistoryController {
   // GET /api/fault-history - Get fault history with filters and pagination
@@ -9,9 +8,10 @@ class FaultHistoryController {
       const {
         startDate,
         endDate,
-        locomotiveId,
-        faultType,
-        faultCode,
+        locomotiveNumbers, // ⚠️ CHANGED from locomotiveId to locomotiveNumbers
+        faultTypes,        // ⚠️ CHANGED from faultType to faultTypes (array)
+        faultCodes,        // ⚠️ CHANGED from faultCode to faultCodes (array)
+        priorityLevels,    // ⚠️ NEW parameter
         page = 1,
         limit = 50
       } = req.query;
@@ -27,12 +27,15 @@ class FaultHistoryController {
       const filters = {
         startDate,
         endDate,
-        locomotiveId: locomotiveId ? parseInt(locomotiveId) : null,
-        faultType,
-        faultCode: faultCode ? parseInt(faultCode) : null,
+        locomotiveNumbers: locomotiveNumbers ? locomotiveNumbers.split(',') : [], // ⚠️ Handle array
+        faultTypes: faultTypes ? faultTypes.split(',') : [],
+        faultCodes: faultCodes ? faultCodes.split(',').map(c => parseInt(c)) : [],
+        priorityLevels: priorityLevels ? priorityLevels.split(',').map(p => parseInt(p)) : [],
         page: parseInt(page),
         limit: parseInt(limit)
       };
+
+      console.log('🔍 Fault History Filters:', filters);
 
       const result = await FaultHistory.getAll(filters);
 
@@ -57,9 +60,10 @@ class FaultHistoryController {
       const {
         startDate,
         endDate,
-        locomotiveId,
-        faultType,
-        faultCode
+        locomotiveNumbers,
+        faultTypes,
+        faultCodes,
+        priorityLevels
       } = req.query;
 
       if (!startDate || !endDate) {
@@ -72,9 +76,10 @@ class FaultHistoryController {
       const filters = {
         startDate,
         endDate,
-        locomotiveId: locomotiveId ? parseInt(locomotiveId) : null,
-        faultType,
-        faultCode: faultCode ? parseInt(faultCode) : null
+        locomotiveNumbers: locomotiveNumbers ? locomotiveNumbers.split(',') : [],
+        faultTypes: faultTypes ? faultTypes.split(',') : [],
+        faultCodes: faultCodes ? faultCodes.split(',').map(c => parseInt(c)) : [],
+        priorityLevels: priorityLevels ? priorityLevels.split(',').map(p => parseInt(p)) : []
       };
 
       const summary = await FaultHistory.getSummaryCounters(filters);
@@ -121,7 +126,7 @@ class FaultHistoryController {
     }
   }
 
-  // CSV Processing Logic
+  // ⚠️ UPDATED CSV Processing Logic untuk FAULT HISTORY format yang benar
   static async processCSVData(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     
@@ -135,55 +140,124 @@ class FaultHistoryController {
     
     const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, '').replace(/\r/g, ''));
     
-    // Enhanced Column mapping CSV → Database (handle PT KAI template)
+    // ⚠️ FIXED Column mapping - PRIORITAS YANG BENAR
     const COLUMN_MAPPING = {
-      // Primary mappings
-      'Locomotive Number': 'locomotive_number',
+      // ⚠️ PRIMARY mappings - yang UTAMA untuk CSV PT KAI
+      'Locomotive Number': 'locomotive_number',  // ✅ INI YANG BENAR: "CC205 21 15"
       'Date Occurred': 'date_occurred',
-      'Fault Type': 'fault_type',
       'Fault Code': 'fault_code',
-      'Description': 'fault_description',
+      'Description': 'fault_description',        
+      'Fault Type': 'fault_type',                
       'Priority Level': 'priority_level',
       'Priority Description': 'priority_description',
+      '24 Hr Count': 'counter',                  
       
-      // Alternative column names (fallbacks)
-      'Locomotive': 'locomotive_number',
-      'Loco Number': 'locomotive_number',
-      'Unit #': 'locomotive_number', // Alternative for locomotive number
+      // ⚠️ Alternative column names HANYA untuk fallback (JANGAN override primary!)
+      'Locomotive': 'locomotive_number',         // Fallback jika tidak ada "Locomotive Number"
+      'Loco Number': 'locomotive_number',        // Fallback jika tidak ada "Locomotive Number"
+      // ❌ HAPUS 'Unit #': locomotive_number - INI YANG BIKIN CONFLICT!
+      'Type': 'fault_type',
+      'Code': 'fault_code',
       'Fault Description': 'fault_description',
-      'Type': 'fault_type', // Fallback for fault type
       'Priority': 'priority_level',
       'Priority Desc': 'priority_description',
-      'Desc': 'fault_description',
+      'Date': 'date_occurred',
+      'Timestamp': 'date_occurred',
+      'Count': 'counter',
+      'Counter': 'counter',
       
-      // Optional columns  
-      'Delta': 'delta',
-      'Status Change DateTime': 'status_change_datetime', // We'll ignore but map for completeness
+      // ⚠️ MAPPING untuk "Unit #" ke field terpisah jika diperlukan
+      'Unit #': 'unit_number',                   // ✅ Map ke field lain, bukan locomotive_number!
+      'Asset Name': 'asset_name',               // Optional fields
+      'Status': 'status'                        // Optional fields
     };
 
-    // Find required columns in headers
+    // ⚠️ IMPROVED: Find column indexes dengan PRIORITAS YANG BENAR
     const columnIndexes = {};
-    Object.keys(COLUMN_MAPPING).forEach(csvColumn => {
+    
+    // ⚠️ STEP 1: Cari kolom primary dulu (yang penting)
+    const primaryColumns = {
+      'Locomotive Number': 'locomotive_number',
+      'Date Occurred': 'date_occurred',
+      'Fault Code': 'fault_code',
+      'Description': 'fault_description',
+      'Fault Type': 'fault_type',
+      'Priority Level': 'priority_level',
+      'Priority Description': 'priority_description',
+      '24 Hr Count': 'counter'
+    };
+    
+    // Cari kolom primary dulu
+    Object.keys(primaryColumns).forEach(csvColumn => {
       const index = headers.findIndex(header => 
         header.toLowerCase().trim() === csvColumn.toLowerCase().trim()
       );
       if (index !== -1) {
-        columnIndexes[COLUMN_MAPPING[csvColumn]] = index;
+        columnIndexes[primaryColumns[csvColumn]] = index;
+        console.log(`✅ Found PRIMARY column: "${csvColumn}" at index ${index} → ${primaryColumns[csvColumn]}`);
+      }
+    });
+    
+    // ⚠️ STEP 2: Cari kolom fallback hanya jika primary tidak ada
+    const fallbackColumns = {
+      'Locomotive': 'locomotive_number',
+      'Loco Number': 'locomotive_number',
+      'Type': 'fault_type',
+      'Code': 'fault_code',
+      'Fault Description': 'fault_description',
+      'Priority': 'priority_level',
+      'Priority Desc': 'priority_description',
+      'Date': 'date_occurred',
+      'Timestamp': 'date_occurred',
+      'Count': 'counter',
+      'Counter': 'counter'
+    };
+    
+    // Hanya cari fallback jika primary belum ada
+    Object.keys(fallbackColumns).forEach(csvColumn => {
+      const targetField = fallbackColumns[csvColumn];
+      if (!columnIndexes[targetField]) { // ⚠️ HANYA jika belum ada primary mapping
+        const index = headers.findIndex(header => 
+          header.toLowerCase().trim() === csvColumn.toLowerCase().trim()
+        );
+        if (index !== -1) {
+          columnIndexes[targetField] = index;
+          console.log(`✅ Found FALLBACK column: "${csvColumn}" at index ${index} → ${targetField}`);
+        }
+      }
+    });
+    
+    // ⚠️ STEP 3: Optional columns (tidak critical)
+    const optionalColumns = {
+      'Unit #': 'unit_number',
+      'Asset Name': 'asset_name',
+      'Status': 'status'
+    };
+    
+    Object.keys(optionalColumns).forEach(csvColumn => {
+      const index = headers.findIndex(header => 
+        header.toLowerCase().trim() === csvColumn.toLowerCase().trim()
+      );
+      if (index !== -1) {
+        columnIndexes[optionalColumns[csvColumn]] = index;
+        console.log(`✅ Found OPTIONAL column: "${csvColumn}" at index ${index} → ${optionalColumns[csvColumn]}`);
       }
     });
 
     // Validate required columns exist
-    const requiredColumns = ['locomotive_number', 'date_occurred', 'fault_type', 'fault_code'];
+    const requiredColumns = ['locomotive_number', 'fault_type', 'fault_code', 'date_occurred'];
     const missingColumns = requiredColumns.filter(col => columnIndexes[col] === undefined);
     
     if (missingColumns.length > 0) {
       throw new Error(`Missing required columns: ${missingColumns.join(', ')}. Available columns: ${headers.join(', ')}`);
     }
 
-    console.log(`📊 CSV Analysis:`);
+    console.log(`📊 Fault History CSV Analysis:`);
     console.log(`   Total columns: ${headers.length}`);
+    console.log(`   Headers found:`, headers.slice(0, 10), '...' ); // Show first 10 headers
     console.log(`   Mapped columns: ${Object.keys(columnIndexes).length}`);
     console.log(`   Column mapping:`, columnIndexes);
+    console.log(`   Required columns check: locomotive_number=${columnIndexes['locomotive_number']}, fault_type=${columnIndexes['fault_type']}, fault_code=${columnIndexes['fault_code']}, date_occurred=${columnIndexes['date_occurred']}`);
 
     let successCount = 0;
     let errorCount = 0;
@@ -194,19 +268,37 @@ class FaultHistoryController {
       try {
         const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, '').replace(/\r/g, ''));
         
-        // Extract required fields using column indexes
+        // ⚠️ EXTRACT required fields dengan VALIDATION yang lebih baik
         const locomotiveNumber = values[columnIndexes['locomotive_number']] || '';
-        const dateOccurred = values[columnIndexes['date_occurred']] || '';
         const faultType = values[columnIndexes['fault_type']] || '';
         const faultCode = values[columnIndexes['fault_code']] || '';
+        const dateOccurred = values[columnIndexes['date_occurred']] || '';
+
+        // ⚠️ DEBUG: Log extracted values untuk memastikan benar
+        console.log(`🔍 Row ${i} extracted values:`);
+        console.log(`   Locomotive Number (index ${columnIndexes['locomotive_number']}): "${locomotiveNumber}"`);
+        console.log(`   Fault Type (index ${columnIndexes['fault_type']}): "${faultType}"`);
+        console.log(`   Fault Code (index ${columnIndexes['fault_code']}): "${faultCode}"`);
+        console.log(`   Date Occurred (index ${columnIndexes['date_occurred']}): "${dateOccurred}"`);
 
         // Validate required fields
-        if (!locomotiveNumber || !dateOccurred || !faultType || !faultCode) {
-          throw new Error(`Missing required data: locomotive_number="${locomotiveNumber}", date_occurred="${dateOccurred}", fault_type="${faultType}", fault_code="${faultCode}"`);
+        if (!locomotiveNumber || !faultType || !faultCode || !dateOccurred) {
+          throw new Error(`Missing required data: locomotive_number="${locomotiveNumber}", fault_type="${faultType}", fault_code="${faultCode}", date_occurred="${dateOccurred}"`);
         }
 
-        // Get or create locomotive
-        const locomotive = await Locomotive.getOrCreate(locomotiveNumber);
+        // ⚠️ ADDITIONAL VALIDATION: Pastikan locomotive_number bukan format "PTKA XXXXXX"
+        if (locomotiveNumber.startsWith('PTKA') || locomotiveNumber.includes('PTKA')) {
+          console.log(`⚠️ Warning: Row ${i} - locomotive_number "${locomotiveNumber}" looks like Unit # instead of Locomotive Number. Checking for alternative...`);
+          
+          // Coba cari di kolom lain jika ada mistake mapping
+          const altLocoNumber = values[0]; // Biasanya Locomotive Number di kolom pertama
+          if (altLocoNumber && !altLocoNumber.startsWith('PTKA') && altLocoNumber.match(/^CC\d+/)) {
+            console.log(`✅ Found alternative locomotive number: "${altLocoNumber}" in column 0`);
+            // Update mapping for next rows
+            columnIndexes['locomotive_number'] = 0;
+            throw new Error(`Row ${i}: Column mapping issue detected. Locomotive Number should be "${altLocoNumber}", not "${locomotiveNumber}". Please check CSV column mapping.`);
+          }
+        }
 
         // Parse date
         const parsedDate = FaultHistoryController.parseDate(dateOccurred);
@@ -216,24 +308,29 @@ class FaultHistoryController {
 
         // Extract optional fields
         const faultDescription = values[columnIndexes['fault_description']] || '';
-        const priorityLevel = parseInt(values[columnIndexes['priority_level']]) || 1;
+        const priorityLevel = columnIndexes['priority_level'] !== undefined ? 
+          (parseInt(values[columnIndexes['priority_level']]) || 1) : 1;
         const priorityDescription = values[columnIndexes['priority_description']] || '';
-        const delta = columnIndexes['delta'] !== undefined ? 
-          (values[columnIndexes['delta']] ? parseInt(values[columnIndexes['delta']]) : null) : null;
+        
+        // ⚠️ UPDATED: Counter dari "24 Hr Count" column atau default 1
+        const counter = columnIndexes['counter'] !== undefined ? 
+          (parseInt(values[columnIndexes['counter']]) || 1) : 1;
 
-        // Prepare fault data
+        console.log(`📊 Parsed data - Loco: ${locomotiveNumber}, Type: ${faultType}, Code: ${faultCode}, Date: ${dateOccurred}, Counter: ${counter}`);
+
+        // ⚠️ PREPARE FAULT DATA (LANGSUNG PAKAI locomotive_number, TIDAK PERLU getOrCreate locomotive!)
         const faultData = {
-          locomotiveId: locomotive.id,
-          dateOccurred: parsedDate,
-          faultType: faultType,
-          faultCode: parseInt(faultCode),
-          faultDescription: faultDescription,
-          priorityLevel: priorityLevel,
-          priorityDescription: priorityDescription,
-          delta: delta
+          locomotive_number: locomotiveNumber,  // ⚠️ Direct assignment
+          fault_type: faultType,
+          fault_code: parseInt(faultCode),
+          fault_description: faultDescription,
+          priority_level: priorityLevel,
+          priority_description: priorityDescription,
+          date_occurred: parsedDate,
+          counter: counter                      // ⚠️ From "24 Hr Count" atau default 1
         };
 
-        // Insert to database (counter will be calculated automatically)
+        // ⚠️ INSERT TO DATABASE (tanpa locomotive lookup!)
         await FaultHistory.create(faultData);
         successCount++;
 
@@ -252,7 +349,7 @@ class FaultHistoryController {
       total_rows: lines.length - 1,
       success_count: successCount,
       error_count: errorCount,
-      errors: errors.slice(0, 10), // Show first 10 errors only
+      errors: errors.slice(0, 10),
       column_analysis: {
         total_columns: headers.length,
         mapped_columns: Object.keys(columnIndexes).length,
@@ -262,19 +359,15 @@ class FaultHistoryController {
     };
   }
 
-  // Helper method to parse different date formats (Enhanced for PT KAI)
+  // Helper method to parse different date formats (OPTIMIZED untuk format PT KAI)
   static parseDate(dateString) {
     if (!dateString) return null;
     
-    // Remove any extra whitespace
     dateString = dateString.trim();
-    
     console.log(`🔍 Parsing date: "${dateString}"`);
     
     try {
-      // Handle different date formats common in PT KAI data
-      
-      // Format 1: DD/MM/YYYY HH:MM (PT KAI common format)
+      // Format 1: DD/MM/YYYY HH:MM (format di CSV user: "21/07/2025 03:30")
       const ddmmyyyyHHMM = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})$/);
       if (ddmmyyyyHHMM) {
         const [, day, month, year, hour, minute] = ddmmyyyyHHMM;
@@ -296,18 +389,7 @@ class FaultHistoryController {
         }
       }
       
-      // Format 3: YYYY-MM-DD HH:MM:SS (ISO with time)
-      const isoWithTime = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
-      if (isoWithTime) {
-        const [, year, month, day] = isoWithTime;
-        const date = new Date(year, month - 1, day);
-        if (!isNaN(date.getTime())) {
-          console.log(`✅ Parsed ISO with time: ${date.toISOString().split('T')[0]}`);
-          return date.toISOString().split('T')[0];
-        }
-      }
-      
-      // Format 4: YYYY-MM-DD (ISO date)
+      // Format 3: YYYY-MM-DD (ISO date)
       const isoDate = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
       if (isoDate) {
         const date = new Date(dateString);
@@ -317,35 +399,7 @@ class FaultHistoryController {
         }
       }
       
-      // Format 5: MM/DD/YYYY HH:MM (US format with time)
-      const mmddyyyyHHMM = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})$/);
-      if (mmddyyyyHHMM) {
-        const [, month, day, year, hour, minute] = mmddyyyyHHMM;
-        // Only try this if day > 12 (to avoid DD/MM confusion)
-        if (parseInt(day) > 12) {
-          const date = new Date(year, month - 1, day, hour, minute);
-          if (!isNaN(date.getTime())) {
-            console.log(`✅ Parsed MM/DD/YYYY HH:MM: ${date.toISOString().split('T')[0]}`);
-            return date.toISOString().split('T')[0];
-          }
-        }
-      }
-      
-      // Format 6: MM/DD/YYYY (US format)
-      const mmddyyyy = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      if (mmddyyyy) {
-        const [, month, day, year] = mmddyyyy;
-        // Only try this if day > 12 (to avoid DD/MM confusion)
-        if (parseInt(day) > 12) {
-          const date = new Date(year, month - 1, day);
-          if (!isNaN(date.getTime())) {
-            console.log(`✅ Parsed MM/DD/YYYY: ${date.toISOString().split('T')[0]}`);
-            return date.toISOString().split('T')[0];
-          }
-        }
-      }
-      
-      // Format 7: DD-MM-YYYY with various separators
+      // Format 4: DD-MM-YYYY with various separators
       const ddmmyyyyDash = dateString.match(/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})$/);
       if (ddmmyyyyDash) {
         const [, day, month, year] = ddmmyyyyDash;
@@ -356,7 +410,7 @@ class FaultHistoryController {
         }
       }
       
-      // Format 8: Try native Date parsing as last resort
+      // Format 5: Try native Date parsing as last resort
       const nativeDate = new Date(dateString);
       if (!isNaN(nativeDate.getTime())) {
         console.log(`✅ Parsed native: ${nativeDate.toISOString().split('T')[0]}`);
@@ -371,10 +425,10 @@ class FaultHistoryController {
     return null;
   }
 
-  // GET /api/fault-history/locomotives - Get locomotives for dropdown
+  // ⚠️ UPDATED: Get locomotives dari fault_history table langsung (BUKAN dari table locomotives!)
   static async getLocomotives(req, res) {
     try {
-      const locomotives = await Locomotive.findAll();
+      const locomotives = await FaultHistory.getDistinctLocomotives();
 
       res.json({
         success: true,

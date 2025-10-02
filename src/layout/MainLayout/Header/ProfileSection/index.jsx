@@ -99,31 +99,31 @@ const ProfileSection = () => {
                     <ListItemIcon>
                       <SettingsTwoToneIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Settings" />
+                    <ListItemText primary="Settings(Coming Soon)" />
                   </ListItemButton>
                   <ListItemButton selected={selectedIndex === 1} onClick={(event) => handleListItemClick(event, 1)}>
                     <ListItemIcon>
                       <PersonTwoToneIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Profile" />
+                    <ListItemText primary="Profile(Coming Soon)" />
                   </ListItemButton>
                   <ListItemButton selected={selectedIndex === 2} onClick={(event) => handleListItemClick(event, 2)}>
                     <ListItemIcon>
                       <DraftsTwoToneIcon />
                     </ListItemIcon>
-                    <ListItemText primary="My Messages" />
+                    <ListItemText primary="My Messages(Coming Soon)" />
                   </ListItemButton>
                   <ListItemButton selected={selectedIndex === 3} onClick={(event) => handleListItemClick(event, 3)}>
                     <ListItemIcon>
                       <LockOpenTwoTone />
                     </ListItemIcon>
-                    <ListItemText primary="Lock Screen" />
+                    <ListItemText primary="Lock Screen(Coming Soon)" />
                   </ListItemButton>
                   <ListItemButton selected={selectedIndex === 4}>
                     <ListItemIcon>
                       <MeetingRoomTwoToneIcon />
                     </ListItemIcon>
-                    <ListItemText primary="Logout" />
+                    <ListItemText primary="Logout(Coming Soon)" />
                   </ListItemButton>
                 </List>
               </ClickAwayListener>

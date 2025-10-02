@@ -23,8 +23,11 @@ import {
 } from '@mui/material';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { id as idLocale } from 'date-fns/locale';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useSelector } from 'react-redux';
+import detailAktivitasToPic from '../../utils/actionPlanPicMapping';
+import dayjs from 'dayjs';
 
 const blueGradient = 'linear-gradient(180deg, #5de0e6, #004aad)';
 
@@ -40,6 +43,236 @@ function TabPanel({ children, value, index }) {
     <Box sx={{ pt: 2 }}>{children}</Box>
   );
 }
+
+// --- Deklarasi mapping Action Plan (pindahkan ke atas agar tidak error) ---
+const komponenOptions = [
+  "Companion Alternator",
+  "Motor Blower",
+  "Power Assembly",
+  "IPM",
+  "EM2000",
+  "Power Supply Module",
+  "VDCL",
+  "PCM 500",
+  "Kompressor",
+  "EFCO",
+  "Water Pump",
+  "Flexible Hose",
+  "Plug PD2",
+  "BPCP",
+  "MPU",
+  "PSU 500",
+  "Turbocharger",
+  "Fuel Pump",
+  "Wiper",
+  "Pemasir",
+  "MPIO",
+  "Relay GR",
+  "Roda",
+  "Bearing"
+];
+const komponenMap = {
+  "Companion Alternator": {
+    lagging: ["Slip Ring Alternator Cacat"],
+    leading: [
+      "Penggantian Slip Ring (Stainless Steel)",
+      "Penambahan Brush Holder 1 Set",
+      "Pengukuran dan Penggantian Carbon Brush (Standar 42 mm)"
+    ]
+  },
+  "Motor Blower": {
+    lagging: ["Motor Blower Terbakar"],
+    leading: [
+      "Inspeksi dan Pemeriksaan Motor Blower (Dial & Shaking)",
+      "Penggantian Bearing Setiap 1,5 Tahun",
+      "Join Inspection dengan DC THN",
+      "21 serie Modifikasi bearing housing kedua sisi",
+      "Penggantian Impeler (21 Series) dengan bahan yang lebih ringan"
+    ]
+  },
+  "Power Assembly": {
+    lagging: [
+      "Power Assembly Failure (Ring Piston Patah, Liner Bocor, P Pipe Lepas, Cylinder Head Crack)",
+      "Power Assembly Failure (Gagal Pelumasan, Scuffing)"
+    ],
+    leading: [
+      "Flushing Fuel Setiap Perawatan",
+      "Drain BBM 1L setiap Perawatan",
+      "Pemeriksaan Ring Piston Setiap P3",
+      "Pemeriksaan Piston Cooling Pipe Pada Saat Perawatan Pertama di 2025",
+      "Pemeriksaan & Inspeksi Piston Cooling Pipe & Seal P12"
+    ]
+  },
+  "IPM": {
+    lagging: ["IPM Error"],
+    leading: [
+      "Instal Ulang Software IPM P12",
+      "Pengecekan kondisi IPM & Test Air Brake",
+      "Periksa dan Pembersihan Komponen Internal IPM setiap 3 Tahun",
+      "Memastikan proses pengelasan sesuai Prosedur dari PRL",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan IPM"
+    ]
+  },
+  "EM2000": {
+    lagging: ["EM2000 Error"],
+    leading: [
+      "Instal Ulang Software EM2000 setiap 3 Tahun",
+      "Pengecekan & Pembersihan EM2000",
+      "Recycle ALL CB sampai Battery tunggu 1 Minute P1",
+      "Pemeriksaan dan Pengamanan Kabel Traction Alternator dari Cacat atau Rubbing"
+    ]
+  },
+  "Power Supply Module": {
+    lagging: ["PSM Error (Suhu Ruang Abnormal)"],
+    leading: [
+      "Pemasangan Cooling Fan pada PSM Compartment",
+      "Pengecekan dan Pembersihan kondisi PSM",
+      "Reposisi Resistor oleh PRL",
+      "Pengecekan kabel High Voltage pada CT A,B,C di Alternator",
+      "Pengecekan shield kabel PSM"
+    ]
+  },
+  "VDCL": {
+    lagging: ["Temperatur VDCL Abnormal, Undervoltage, Overvoltage"],
+    leading: [
+      "Inspeksi Sistem Pendingan E Locker Setiap Perawatan",
+      "Melakukan Pengecekan, Pembersihan Phase Module seluruh lokomotif",
+      "Membuat alat pemantauan suhu E Locker terintegrasi IoT",
+      "Periksa sikuit dari ground setiap Perawatan"
+    ]
+  },
+  "PCM 500": {
+    lagging: ["PCM 500 Error"],
+    leading: [
+      "Instal Ulang Software PCM 500 setiap 3 Tahun",
+      "Pengecekan & Pembersihan PCM 500 Setiap Perawatan",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan",
+      "Pemeriksaan Low Voltage Ground setiap bulan",
+      "Periksa ground AC setiap perawatan"
+    ]
+  },
+  "Kompressor": {
+    lagging: ["Kompressor Failure (STT Klep Bocor, Gagal Pelumasan)"],
+    leading: [
+      "Pengecekan fungsi dan kondisi CLOPS setiap Bulan",
+      "Pengecekan Kebocoran & Volume Pelumas setiap Bulan",
+      "Pembuatan alat DC LINK berbasis IoT (Daily Checker Locomotive Integrated NetworK)"
+    ]
+  },
+  "EFCO": {
+    lagging: ["EFCO Error (Tidak bisa ditrigger)"],
+    leading: [
+      "Pemeriksaan Kondisi Terminal EFCO L & R Setiap Perawatan",
+      "Pengecekan & Penggantian Matras EFCO"
+    ]
+  },
+  "Water Pump": {
+    lagging: ["Water Pump Bocor, Pipa Air Pendingin Bocor"],
+    leading: [
+      "Pengecekan semua kondisi Pipa Water Pump setiap Bulan",
+      "Melakukan Pemantauan tekanan in dan out melalui Parameter Uptime",
+      "Pengecekan dan Penggantian Mur (Jika Sudah Maksimal)",
+      "Pemeriksaan Posisi Coupling setiap Bulan"
+    ]
+  },
+  "Flexible Hose": {
+    lagging: ["Flexible Hose Rusak"],
+    leading: [
+      "Pengecekan Semua Kondisi Flexible Hose setiap Bulan",
+      "Penggantian setiap 3 Tahun"
+    ]
+  },
+  "Plug PD2": {
+    lagging: ["Plug PD2 Kendor & Aus"],
+    leading: ["Pengecekan semua kondisi PLUG PD2"]
+  },
+  "BPCP": {
+    lagging: ["BPCP Modul Bocor"],
+    leading: [
+      "Pemeriksaan Kondisi BPCP setiap Bulan",
+      "Reload EPCU Software P36",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan BPCP",
+      "Drain Manual MR setiap Bulan"
+    ]
+  },
+  "MPU": {
+    lagging: ["MPU Error"],
+    leading: [
+      "Instal Ulang MPU Setiap setiap 3 Tahun",
+      "Pengecekan dan Pembersihan MPU setiap perawatan",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan MPU"
+    ]
+  },
+  "PSU 500": {
+    lagging: ["PSU 500 tidak mengeluarkan tegangan"],
+    leading: [
+      "Pengecekan dan Pembersihan PSU 500 Setiap Perawatan",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan PSU 500"
+    ]
+  },
+  "Turbocharger": {
+    lagging: ["Turbocharger Cacat"],
+    leading: [
+      "Pemeriksaan Kondisi Turbocharger (Mur, Baut, TPURPM)",
+      "Pembuatan alat DC LINK berbasis IoT (Daily Checker Locomotive Integrated NetworK)",
+      "Pemeriksaan GAP Clearence Impeler Air Inlet Setiap Perawatan"
+    ]
+  },
+  "Fuel Pump": {
+    lagging: ["Inverter Trip"],
+    leading: [
+      "Pengecekan dan pengukuran Fuel Pump Setiap Perawatan",
+      "Flushing Fuel Setiap Perawatan (FP)"
+    ]
+  },
+  "Wiper": {
+    lagging: ["Wiper Patah"],
+    leading: [
+      "Pengecekan dan Penggantian Komponen Wiper (Blade, Cup Nut, Baut) setiap Bulan",
+      "Setup Langkah Blade setiap Bulan"
+    ]
+  },
+  "Pemasir": {
+    lagging: ["Pemasir tersumbat"],
+    leading: ["Pengecekan Semua Komponen Pemasir"]
+  },
+  "MPIO": {
+    lagging: ["MPIO Error"],
+    leading: [
+      "Pengecekan dan Pembersihan MPIO Setiap Perawatan",
+      "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan MPIO",
+      "Reload EPCU Software setiap 36 Bulan (MPIO)"
+    ]
+  },
+  "Relay GR": {
+    lagging: ["Relay GR tidak bisa reset"],
+    leading: [
+      "Pengecekan Semua Kondisi Relay GR & Koneksinya",
+      "Melakukan Ground Test semua lokomotif saat perawatan"
+    ]
+  },
+  "Roda": {
+    lagging: ["Diameter Roda Berkurang Lebih Cepat"],
+    leading: ["Melakukan Pengukuran Roda Periode 1 Bulan"]
+  },
+  "Bearing": {
+    lagging: ["Bearing Failure Mendekati KM Tempuh Maksimal"],
+    leading: [
+      "Melakukan Pengecekan Suhu Bearing",
+      "Pengecekan Seal Cap (Tidak Meler/Rusak)",
+      "Pengecekan Baut End Cup Kencang dan Lengkap"
+    ]
+  }
+};
+const targetOptions = [
+  "Setiap Perawatan",
+  "Setiap Bulan",
+  "Setiap 12 Bulan",
+  "Setiap 1,5 Tahun",
+  "Setiap 3 Tahun",
+  "Setiap P36/36 Bulan",
+  "Tim PRL dan Tim 8"
+];
 
 export default function InputDataMultiKategori() {
   // Ambil role user dari Redux (default ke 'user' jika tidak ada)
@@ -87,23 +320,6 @@ const [sertifikasi, setSertifikasi] = useState({
   const nomorLokomotifOptions = [
   'CC 205 01', 'CC 205 02', 'CC 205 03', 'CC 205 04', 'CC 205 05', 'CC 205 06', 'CC 205 07', 'CC 205 08', 'CC 205 09', 'CC 205 10',
 ];
-const komponenOptions = [
-  'Engine', 'Transmisi', 'Rem', 'Sistem Listrik', 'Body', 'Chassis', 'Roda', 'Tangki', 'Sistem Pendingin', 'Lampu',
-];
-const aktivitasOptions = [
-  'Pemeriksaan', 'Perbaikan', 'Penggantian', 'Pembersihan', 'Pengujian', 'Kalibrasi', 'Pengecatan', 'Pengelasan',
-];
-
-const [actionPlan, setActionPlan] = useState({
-  namaPemeriksa: '',
-  tanggal: null,
-  nomorLokomotif: '',
-  komponen: '',
-  aktivitas: '',
-  foto: null,
-  fotoError: '',
-  fotoPreview: null,
-});
 const kategoriFasilitasOptions = [
   'Alat Angkut', 'Evakuasi', 'Safety', 'Perawatan', 'Pendukung',
 ];
@@ -134,6 +350,18 @@ const [fasilitas, setFasilitas] = useState({
   fotoPreview: null,
 });
 
+// Tambahkan deklarasi state actionPlan agar tidak error
+const [actionPlan, setActionPlan] = useState({
+  namaPemeriksa: '',
+  tanggal: null,
+  nomorLokomotif: '',
+  komponen: '',
+  aktivitas: '',
+  detailAktivitas: '',
+  target: '',
+  foto: null
+});
+
   // Handlers
 const handleTabChange = (_, newValue) => setTab(newValue);
 const handleManpowerChange = (e) => setManpower({ ...manpower, [e.target.name]: e.target.value });
@@ -143,6 +371,48 @@ const handleActionPlanChange = (e) => setActionPlan({ ...actionPlan, [e.target.n
 const handleActionPlanDateChange = (value) => setActionPlan({ ...actionPlan, tanggal: value });
 const handleActionPlanSelectChange = (field, value) => setActionPlan({ ...actionPlan, [field]: value });
 
+// Handler untuk perubahan Komponen pada Action Plan
+const handleKomponenChange = (event, value) => {
+  setActionPlan(prev => ({
+    ...prev,
+    komponen: value || '',
+    aktivitas: '',
+    detailAktivitas: '',
+    target: ''
+  }));
+};
+
+// Handler untuk perubahan Aktivitas (lagging)
+const handleAktivitasChange = (event, value) => {
+  setActionPlan(prev => ({
+    ...prev,
+    aktivitas: value || '',
+    detailAktivitas: '' // reset detailAktivitas jika aktivitas berubah
+  }));
+};
+
+// Handler untuk perubahan Detail Aktivitas (leading)
+const handleDetailAktivitasChange = (event, value) => {
+  setActionPlan(prev => ({
+    ...prev,
+    detailAktivitas: value || ''
+  }));
+};
+
+// Handler untuk perubahan Target
+const handleTargetChange = (event, value) => {
+  setActionPlan(prev => ({
+    ...prev,
+    target: value || ''
+  }));
+};
+
+// --- Dropdown dinamis Action Plan ---
+// komponenOptions dan komponenMap sudah lengkap (lihat bagian atas file)
+const laggingOptions = komponenMap[actionPlan.komponen]?.lagging || [];
+const leadingOptions = komponenMap[actionPlan.komponen]?.leading || [];
+// targetOptions sudah ada di bagian bawah mapping
+
 const handleActionPlanFile = (e) => {
   const file = e.target.files[0];
   if (file) {
@@ -151,8 +421,13 @@ const handleActionPlanFile = (e) => {
       return;
     }
     setActionPlan((prev) => ({ ...prev, foto: file, fotoError: '', fotoPreview: URL.createObjectURL(file) }));
+  } else {
+    setActionPlan((prev) => ({ ...prev, foto: null, fotoError: '', fotoPreview: null }));
   }
 };
+
+// Alias agar kompatibel dengan JSX lama
+const handleFotoChange = handleActionPlanFile;
 
 const handleActionPlanDrop = (e) => {
   e.preventDefault();
@@ -219,8 +494,43 @@ switch (kategori) {
   case 'pantauan':
     data = pantauan;
     break;
+  case 'pantauanRoda':
+    data = pantauanRoda;
+    break;
   case 'actionPlan':
-    data = actionPlan;
+    // Mapping camelCase ke snake_case untuk backend
+    // Mapping otomatis PIC berdasarkan detailAktivitas
+// (import detailAktivitasToPic di bagian atas file)
+    // Fungsi mapping PIC robust: normalisasi key (trim & lower case)
+    // Pastikan detailAktivitas hanya bisa dipilih dari dropdown leadingOptions, yang sumbernya dari Object.keys(detailAktivitasToPic)
+const getPic = (detailAktivitas) => {
+  const normalized = (detailAktivitas || '').trim().toLowerCase();
+  const mapping = {};
+  Object.keys(detailAktivitasToPic).forEach(key => {
+    mapping[key.trim().toLowerCase()] = detailAktivitasToPic[key];
+  });
+  return mapping[normalized] || null;
+};
+// Log detail value dan perbandingan dengan key mapping
+console.log('[DEBUG] detail_aktivitas (asli):', actionPlan.detailAktivitas, '| length:', (actionPlan.detailAktivitas||'').length);
+console.log('[DEBUG] detail_aktivitas (trim,lower):', (actionPlan.detailAktivitas||'').trim().toLowerCase(), '| length:', (actionPlan.detailAktivitas||'').trim().toLowerCase().length);
+Object.keys(detailAktivitasToPic).forEach(k => {
+  if ((actionPlan.detailAktivitas||'').trim().toLowerCase() === k.trim().toLowerCase()) {
+    console.log('[DEBUG] MATCHED KEY:', k, '| length:', k.length);
+  }
+});
+const pic = getPic(actionPlan.detailAktivitas);
+data = {
+      nama_pemeriksa: actionPlan.namaPemeriksa,
+      tanggal: actionPlan.tanggal,
+      nomor_lokomotif: actionPlan.nomorLokomotif,
+      komponen: actionPlan.komponen,
+      aktivitas: actionPlan.aktivitas,
+      detail_aktivitas: actionPlan.detailAktivitas,
+      pic,
+      target: actionPlan.target,
+      foto_path: actionPlan.fotoPath
+    };
     break;
   case 'fasilitas':
     data = fasilitas;
@@ -251,8 +561,8 @@ if (kategori === 'manpower') {
     jabatan: manpower.jabatan,
     regu: manpower.regu,
     tempat_lahir: manpower.tempatLahir,
-    tanggal_lahir: manpower.tanggalLahir ? new Date(manpower.tanggalLahir).toISOString().slice(0,10) : null,
-    tmt_pensiun: manpower.tmtPensiun ? new Date(manpower.tmtPensiun).toISOString().slice(0,10) : null,
+    tanggal_lahir: manpower.tanggalLahir ? dayjs(manpower.tanggalLahir).format('YYYY-MM-DD') : null,
+    tmt_pensiun: manpower.tmtPensiun ? dayjs(manpower.tmtPensiun).format('YYYY-MM-DD') : null,
     pendidikan: manpower.pendidikan,
     is_active: true
   };
@@ -271,15 +581,15 @@ if (kategori === 'manpower') {
     // 2. Submit diklat
     const diklatPayload = {
       nipp: manpower.nipp,
-      dto_prs: manpower.diklatT2PRS ? new Date(manpower.diklatT2PRS).toISOString().slice(0,10) : null,
-      dto_pms: manpower.diklatT2PMS ? new Date(manpower.diklatT2PMS).toISOString().slice(0,10) : null,
-      t2_prs: manpower.diklatT2PRS ? new Date(manpower.diklatT2PRS).toISOString().slice(0,10) : null,
-      t2_pms: manpower.diklatT2PMS ? new Date(manpower.diklatT2PMS).toISOString().slice(0,10) : null,
-      t3_prs: manpower.diklatT3PRS ? new Date(manpower.diklatT3PRS).toISOString().slice(0,10) : null,
-      t3_pms: manpower.diklatT3PMS ? new Date(manpower.diklatT3PMS).toISOString().slice(0,10) : null,
-      t4_mps: manpower.diklatT4 ? new Date(manpower.diklatT4).toISOString().slice(0,10) : null,
-      smdp: manpower.diklatSMDP ? new Date(manpower.diklatSMDP).toISOString().slice(0,10) : null,
-      jmdp: manpower.diklatJMDP ? new Date(manpower.diklatJMDP).toISOString().slice(0,10) : null
+      dto_prs: manpower.diklatT2PRS ? dayjs(manpower.diklatT2PRS).format('YYYY-MM-DD') : null,
+      dto_pms: manpower.diklatT2PMS ? dayjs(manpower.diklatT2PMS).format('YYYY-MM-DD') : null,
+      t2_prs: manpower.diklatT2PRS ? dayjs(manpower.diklatT2PRS).format('YYYY-MM-DD') : null,
+      t2_pms: manpower.diklatT2PMS ? dayjs(manpower.diklatT2PMS).format('YYYY-MM-DD') : null,
+      t3_prs: manpower.diklatT3PRS ? dayjs(manpower.diklatT3PRS).format('YYYY-MM-DD') : null,
+      t3_pms: manpower.diklatT3PMS ? dayjs(manpower.diklatT3PMS).format('YYYY-MM-DD') : null,
+      t4_mps: manpower.diklatT4 ? dayjs(manpower.diklatT4).format('YYYY-MM-DD') : null,
+      smdp: manpower.diklatSMDP ? dayjs(manpower.diklatSMDP).format('YYYY-MM-DD') : null,
+      jmdp: manpower.diklatJMDP ? dayjs(manpower.diklatJMDP).format('YYYY-MM-DD') : null
     };
     await fetch('/api/manpower-diklat', {
       method: 'POST',
@@ -292,9 +602,9 @@ if (kategori === 'manpower') {
         nipp: manpower.nipp,
         sertifikasi: sertifikasi.sertifikasi,
         nomor_sertifikat: sertifikasi.nomor_sertifikat,
-        tanggal_terbit: sertifikasi.tanggal_terbit ? new Date(sertifikasi.tanggal_terbit).toISOString().slice(0,10) : null,
-        berlaku_sampai: sertifikasi.berlaku_sampai ? new Date(sertifikasi.berlaku_sampai).toISOString().slice(0,10) : null,
-        masa_berlaku: sertifikasi.masa_berlaku ? new Date(sertifikasi.masa_berlaku).toISOString().slice(0,10) : null,
+        tanggal_terbit: sertifikasi.tanggal_terbit ? dayjs(sertifikasi.tanggal_terbit).format('YYYY-MM-DD') : null,
+        berlaku_sampai: sertifikasi.berlaku_sampai ? dayjs(sertifikasi.berlaku_sampai).format('YYYY-MM-DD') : null,
+        masa_berlaku: sertifikasi.masa_berlaku ? dayjs(sertifikasi.masa_berlaku).format('YYYY-MM-DD') : null,
         status: sertifikasi.status
       };
       await fetch('/api/manpower-sertifikasi', {
@@ -330,9 +640,9 @@ if (kategori === 'fasilitas') {
     merk: data.merk,
     tahun_pengadaan: data.tahunPengadaan ? parseInt(data.tahunPengadaan) : null,
     tahun_mulai_dinas: data.tahunMulaiDinas ? parseInt(data.tahunMulaiDinas) : null,
-    tanggal_perawatan: data.tanggalPerawatan ? new Date(data.tanggalPerawatan).toISOString().slice(0,10) : null,
+    tanggal_perawatan: data.tanggalPerawatan ? dayjs(data.tanggalPerawatan).format('YYYY-MM-DD') : null,
     kategori_standardisasi: data.kategoriStandardisasi,
-    tanggal_sertifikasi: data.tanggalSertifikasi ? new Date(data.tanggalSertifikasi).toISOString().slice(0,10) : null,
+    tanggal_sertifikasi: data.tanggalSertifikasi ? dayjs(data.tanggalSertifikasi).format('YYYY-MM-DD') : null,
     lokasi_penyimpanan: data.lokasiPenyimpanan,
     umur_komponen: data.umurKomponen ? parseInt(data.umurKomponen) : null,
     foto_path: data.foto ? data.foto.name : null, // Untuk demo, hanya simpan nama file
@@ -357,6 +667,253 @@ if (kategori === 'fasilitas') {
   return;
 }
 
+// ===== SUBMIT ACTION PLAN =====
+if (kategori === 'actionPlan') {
+  // Validasi field wajib (frontend)
+  const required = [
+    { field: 'namaPemeriksa', label: 'Nama Pemeriksa' },
+    { field: 'tanggal', label: 'Tanggal' },
+    { field: 'nomorLokomotif', label: 'Nomor Lokomotif' },
+    { field: 'komponen', label: 'Komponen' },
+    { field: 'aktivitas', label: 'Aktivitas (Lagging Indicator)' },
+    { field: 'detailAktivitas', label: 'Detail Aktivitas (Leading Indicator)' },
+    { field: 'target', label: 'Target' }
+  ];
+  const missing = required.filter(r => !actionPlan[r.field] || String(actionPlan[r.field]).trim() === '');
+  if (missing.length > 0) {
+    alert('Field wajib belum diisi: ' + missing.map(m => m.label).join(', '));
+    return;
+  }
+  // Mapping ke backend
+  const payload = {
+    nama_pemeriksa: actionPlan.namaPemeriksa,
+    tanggal: actionPlan.tanggal ? dayjs(actionPlan.tanggal).format('YYYY-MM-DD') : null,
+    nomor_lokomotif: actionPlan.nomorLokomotif,
+    komponen: actionPlan.komponen,
+    aktivitas: actionPlan.aktivitas, // lagging indicator
+    detail_aktivitas: actionPlan.detailAktivitas, // leading indicator
+    target: actionPlan.target,
+    foto_path: actionPlan.foto ? actionPlan.foto.name : null // Simpan nama file jika ada
+  };
+  try {
+    const res = await fetch('/api/action-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Gagal menyimpan data action plan: ' + (err.message || 'Unknown error'));
+      return;
+    }
+    alert('Data action plan berhasil disimpan!');
+    setActionPlan({
+      namaPemeriksa: '',
+      tanggal: null,
+      nomorLokomotif: '',
+      komponen: '',
+      aktivitas: '',
+      detailAktivitas: '',
+      target: '',
+      foto: null,
+      fotoError: '',
+      fotoPreview: null
+    });
+    // Optionally, trigger a dashboard refresh if needed (e.g. via callback/props)
+  } catch (error) {
+    alert('Gagal submit data action plan: ' + error.message);
+  }
+  return;
+}
+
+// ===== SUBMIT PANTAUAN RODA =====
+if (kategori === 'pantauanRoda') {
+  // Validasi identitas dasar
+  const required = ['nipp','nama','jabatan','depo','nomorLokomotif'];
+  const missing = required.filter(f => !pantauanRoda[f] || String(pantauanRoda[f]).trim() === '');
+  if (missing.length > 0) {
+    alert('Field identitas wajib belum diisi: ' + missing.join(', '));
+    return;
+  }
+  // Mapping 12 pasang data diameter/thickness/height
+  const wheelLabels = [1,2,3,4,5,6];
+  console.log('[DEBUG] pantauanRoda sebelum mapping batch:', pantauanRoda);
+  const batch = [];
+  for (let n of wheelLabels) {
+    // Kanan
+    batch.push({
+      loko: pantauanRoda.nomorLokomotif,
+      date: new Date().toISOString().slice(0,10),
+      diameter: parseFloat(pantauanRoda[`diameterRight${n}`]) || null,
+      thickness: parseFloat(pantauanRoda[`flangeThicknessRight${n}`]) || null,
+      height: parseFloat(pantauanRoda[`flangeHeightRight${n}`]) || null,
+      status: '', // opsional, backend bisa hitung status
+      lifetime: '', // opsional
+      posisi: `KANAN${n}`,
+      nipp: pantauanRoda.nipp,
+      nama: pantauanRoda.nama,
+      jabatan: pantauanRoda.jabatan,
+      depo: pantauanRoda.depo
+    });
+    // Kiri
+    batch.push({
+      loko: pantauanRoda.nomorLokomotif,
+      date: new Date().toISOString().slice(0,10),
+      diameter: parseFloat(pantauanRoda[`diameterLeft${n}`]) || null,
+      thickness: parseFloat(pantauanRoda[`flangeThicknessLeft${n}`]) || null,
+      height: parseFloat(pantauanRoda[`flangeHeightLeft${n}`]) || null,
+      status: '',
+      lifetime: '',
+      posisi: `KIRI${n}`,
+      nipp: pantauanRoda.nipp,
+      nama: pantauanRoda.nama,
+      jabatan: pantauanRoda.jabatan,
+      depo: pantauanRoda.depo
+    });
+  }
+  // Pastikan minimal 12 data diameter/thickness/height terisi
+  const validCount = batch.filter(d => d.diameter && d.thickness && d.height).length;
+  if (validCount < 12) {
+    alert('Minimal 12 data diameter/thickness/height harus diisi lengkap!');
+    return;
+  }
+  try {
+    // Hitung min untuk preview status (frontend)
+    const diameter_min = Math.min(...batch.map(d => Number(d.diameter)));
+    const thickness_min = Math.min(...batch.map(d => Number(d.thickness)));
+    const height_min = Math.min(...batch.map(d => Number(d.height)));
+    // Logic status baru (sama seperti backend)
+    function getStatus(param, value) {
+      if (param === 'diameter') {
+        if (value < 990 || value > 1067) return 'INVALID';
+        if (value >= 990 && value <= 998) return 'URGENT';
+        if (value >= 999 && value <= 1015) return 'WARNING';
+        if (value >= 1016 && value <= 1067) return 'NORMAL';
+      }
+      if (param === 'thickness') {
+        if (value < 22 || value > 32) return 'INVALID';
+        if (value >= 22 && value <= 23) return 'URGENT';
+        if (value >= 24 && value <= 25) return 'WARNING';
+        if (value >= 26 && value <= 32) return 'NORMAL';
+      }
+      if (param === 'flange') {
+        if (value === 33) return 'URGENT';
+        if (value >= 31 && value <= 32) return 'WARNING';
+        if (value >= 28 && value <= 30) return 'NORMAL';
+        return 'INVALID';
+      }
+      return 'INVALID';
+    }
+    const statusList = [
+      getStatus('diameter', diameter_min),
+      getStatus('thickness', thickness_min),
+      getStatus('flange', height_min)
+    ];
+    let worstStatus = 'NORMAL';
+    if (statusList.includes('URGENT')) worstStatus = 'URGENT';
+    else if (statusList.includes('WARNING')) worstStatus = 'WARNING';
+    else if (statusList.includes('INVALID')) worstStatus = 'INVALID';
+    // Set status untuk setiap detail batch
+    const batchWithStatus = batch.map(d => {
+      return {
+        ...d,
+        status_diameter: getStatus('diameter', Number(d.diameter)),
+        status_thickness: getStatus('thickness', Number(d.thickness)),
+        status_flange: getStatus('flange', Number(d.height))
+      };
+    });
+    // Payload sesuai backend
+    const payload = {
+      nomor_lokomotif: pantauanRoda.nomorLokomotif,
+      tanggal_inspeksi: pantauanRoda.tanggalInspeksi ? (typeof pantauanRoda.tanggalInspeksi === 'string' ? pantauanRoda.tanggalInspeksi : pantauanRoda.tanggalInspeksi.toISOString().slice(0,10)) : new Date().toISOString().slice(0,10),
+      inspector_name: pantauanRoda.nama, // atau field lain jika ada
+      keterangan: pantauanRoda.keterangan || '',
+      detail: batchWithStatus,
+      status_preview: worstStatus // opsional, untuk preview di FE
+    };
+
+    // (opsional: tampilkan status preview ke user sebelum submit)
+    // alert('Status summary box (preview): ' + worstStatus);
+    console.log('Batch detail yang dikirim:', batchWithStatus);
+    const res = await fetch('/api/pantauan-roda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Gagal menyimpan data pantauan roda: ' + (err.message || 'Unknown error'));
+      return;
+    }
+    alert('Data pantauan roda berhasil disimpan!');
+    // Reset form
+    const state = {};
+    ['nipp','nama','jabatan','depo','nomorLokomotif','tanggalInspeksi'].forEach(f => { state[f] = ''; });
+    ['diameter','flangeThickness','flangeHeight'].forEach(kat => {
+      wheelLabels.forEach(n => {
+        state[`${kat}Right${n}`] = '';
+        state[`${kat}Left${n}`] = '';
+      });
+    });
+    setPantauanRoda(state);
+  } catch (error) {
+    alert('Gagal submit data pantauan roda: ' + error.message);
+  }
+  return;
+}
+if (kategori === 'actionPlan') {
+  // Validasi field wajib (frontend)
+  const required = [
+    { field: 'namaPemeriksa', label: 'Nama Pemeriksa' },
+    { field: 'tanggal', label: 'Tanggal Pelaksanaan' },
+    { field: 'nomorLokomotif', label: 'Nomor Lokomotif' },
+    { field: 'komponen', label: 'Komponen' },
+    { field: 'aktivitas', label: 'Aktivitas' },
+    { field: 'detailAktivitas', label: 'Detail Aktivitas' }
+  ];
+  const missing = required.filter(r => !actionPlan[r.field]);
+  if (missing.length > 0) {
+    alert('Field wajib belum diisi: ' + missing.map(m => m.label).join(', '));
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append('nama_pemeriksa', actionPlan.namaPemeriksa);
+    formData.append('tanggal', actionPlan.tanggal ? dayjs(actionPlan.tanggal).format('YYYY-MM-DD') : '');
+    formData.append('nomor_lokomotif', actionPlan.nomorLokomotif);
+    formData.append('komponen', actionPlan.komponen);
+    formData.append('aktivitas', actionPlan.aktivitas);
+    formData.append('detail_aktivitas', actionPlan.detailAktivitas);
+    formData.append('pic', pic);
+    // Jika ingin simpan target, masukkan ke keterangan (opsional)
+    // formData.append('keterangan', actionPlan.target || '');
+    if (actionPlan.foto) {
+      formData.append('foto', actionPlan.foto);
+    }
+    const res = await fetch('/api/action-plan', {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Gagal menyimpan data Action Plan: ' + (err.message || 'Unknown error'));
+      return;
+    }
+    alert('Data Action Plan berhasil disimpan!');
+    setActionPlan({
+      namaPemeriksa: '',
+      tanggal: null,
+      nomorLokomotif: '',
+      komponen: '',
+      aktivitas: '',
+      detailAktivitas: '',
+      foto: null
+    });
+  } catch (error) {
+    alert('Gagal submit Action Plan: ' + error.message);
+  }
+  return;
+}
 // Untuk kategori lain, tetap pakai alert simulasi
 alert('Data disimpan untuk kategori: ' + kategori + '\n' + JSON.stringify(data, null, 2));
 };  
@@ -385,7 +942,7 @@ alert('Data disimpan untuk kategori: ' + kategori + '\n' + JSON.stringify(data, 
     minHeight: 56
   };
 
-  // --- FORMS ---
+// --- FORMS ---
   const pendidikanOptions = [
   'SLTA', 'D3', 'D1', 'SD'
   ];
@@ -453,36 +1010,36 @@ alert('Data disimpan untuk kategori: ' + kategori + '\n' + JSON.stringify(data, 
           <Grid item xs={12} md={3} sx={{ minWidth: 0 }}><DatePicker label="JMDP" value={manpower.diklatJMDP} onChange={(v) => handleManpowerDateChange('diklatJMDP', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} /></Grid>
           <Grid item xs={12} md={3} sx={{ minWidth: 0 }}><DatePicker label="DIKSAR" value={manpower.diklatDIKSAR} onChange={(v) => handleManpowerDateChange('diklatDIKSAR', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} /></Grid>
           {/* Sertifikasi Satu Entry */}
-<Grid item xs={12} sx={{ mt: 3 }}>
-  <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>Sertifikasi</Typography>
-  <Divider sx={{ mb: 2 }} />
-</Grid>
-<Grid item xs={12} md={3} sx={{ minWidth: 0 }}>
-  <FormControl fullWidth size="small">
-    <InputLabel id="jenis-sertifikasi-label">Jenis Sertifikasi</InputLabel>
-    <Select
-      labelId="jenis-sertifikasi-label"
-      value={sertifikasi.jenis}
-      label="Jenis Sertifikasi"
-      onChange={e => handleSertifikasiChange('jenis', e.target.value)}
-      displayEmpty
-    >
-      <MenuItem value="">Pilih Jenis</MenuItem>
-      <MenuItem value="ths">THS</MenuItem>
-      <MenuItem value="prs pelaksana">PRS Pelaksana</MenuItem>
-      <MenuItem value="pms pelaksana">PMS Pelaksana</MenuItem>
-    </Select>
-  </FormControl>
-</Grid>
-<Grid item xs={12} md={3} sx={{ minWidth: 0 }}>
-  <TextField name="nomorSertifikat" label="Nomor Sertifikat" fullWidth value={sertifikasi.nomorSertifikat} onChange={e => handleSertifikasiChange('nomorSertifikat', e.target.value)} size="small" sx={{ mb: { xs: 2, md: 0 } }} />
-</Grid>
-<Grid item xs={12} md={2} sx={{ minWidth: 0 }}>
-  <DatePicker label="Tanggal Terbit" value={sertifikasi.tanggalTerbitSertifikat} onChange={v => handleSertifikasiChange('tanggalTerbitSertifikat', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} />
-</Grid>
-<Grid item xs={12} md={2} sx={{ minWidth: 0 }}>
-  <DatePicker label="Masa Berlaku" value={sertifikasi.masaBerlakuSertifikat} onChange={v => handleSertifikasiChange('masaBerlakuSertifikat', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} />
-</Grid>
+          <Grid item xs={12} sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>Sertifikasi</Typography>
+            <Divider sx={{ mb: 2 }} />
+          </Grid>
+          <Grid item xs={12} md={3} sx={{ minWidth: 0 }}>
+            <FormControl fullWidth size="small">
+            <InputLabel id="jenis-sertifikasi-label">Jenis Sertifikasi</InputLabel>
+            <Select
+              labelId="jenis-sertifikasi-label"
+              value={sertifikasi.jenis}
+              label="Jenis Sertifikasi"
+              onChange={e => handleSertifikasiChange('jenis', e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value="">Pilih Jenis</MenuItem>
+              <MenuItem value="ths">THS</MenuItem>
+              <MenuItem value="prs pelaksana">PRS Pelaksana</MenuItem>
+              <MenuItem value="pms pelaksana">PMS Pelaksana</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={3} sx={{ minWidth: 0 }}>
+          <TextField name="nomorSertifikat" label="Nomor Sertifikat" fullWidth value={sertifikasi.nomor_sertifikat} onChange={e => handleSertifikasiChange('nomor_sertifikat', e.target.value)} size="small" sx={{ mb: { xs: 2, md: 0 } }} />
+        </Grid>
+        <Grid item xs={12} md={2} sx={{ minWidth: 0 }}>
+          <DatePicker label="Tanggal Terbit" value={sertifikasi.tanggal_terbit} onChange={v => handleSertifikasiChange('tanggal_terbit', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} />
+        </Grid>
+        <Grid item xs={12} md={2} sx={{ minWidth: 0 }}>
+          <DatePicker label="Masa Berlaku" value={sertifikasi.masa_berlaku} onChange={v => handleSertifikasiChange('masa_berlaku', v)} slotProps={{ textField: { fullWidth: true, size: 'small', sx: { mb: { xs: 2, md: 0 } } } }} />
+        </Grid>
 <Grid item xs={12} md={2} sx={{ minWidth: 0 }}>
   <FormControl fullWidth size="small">
     <InputLabel id="status-sertifikasi-label">Status</InputLabel>
@@ -527,7 +1084,8 @@ const identitasDasarPantauanFields = [
   { name: 'nama', label: 'Nama Pegawai', helper: 'Nama lengkap petugas' },
   { name: 'jabatan', label: 'Jabatan', helper: 'Jabatan pegawai' },
   { name: 'depo', label: 'Depo', helper: 'Nama depo' },
-  { name: 'nomorLokomotif', label: 'Nomor Lokomotif', helper: 'Nomor identitas lokomotif' }
+  { name: 'nomorLokomotif', label: 'Nomor Lokomotif', helper: 'Nomor identitas lokomotif' },
+  { name: 'tanggalInspeksi', label: 'Tanggal Inspeksi/Perawatan', helper: 'Tanggal pemeriksaan/perawatan (YYYY-MM-DD)', type: 'date' }
 ];
 
 const wheelLabels = [1,2,3,4,5,6];
@@ -596,7 +1154,14 @@ const [pantauanRoda, setPantauanRoda] = useState(() => {
   sectionConfigs.forEach(sec => sec.inputs.forEach(inp => { state[inp.name] = ''; }));
   return state;
 });
-const handlePantauanRodaChange = e => setPantauanRoda({ ...pantauanRoda, [e.target.name]: e.target.value });
+const handlePantauanRodaChange = e => {
+  const { name, value } = e.target;
+  setPantauanRoda(prev => {
+    const next = { ...prev, [name]: value };
+    console.log('[DEBUG] Change field:', name, 'value:', value, 'pantauanRoda:', next);
+    return next;
+  });
+};
 
 const PantauanRodaForm = (
   <Card sx={formCardStyle}>
@@ -620,16 +1185,27 @@ const PantauanRodaForm = (
         <Grid container spacing={2}>
           {identitasDasarPantauanFields.map((f, i) => (
             <Grid item xs={12} md={6} key={f.name} sx={{ minWidth: 0 }}>
-              <TextField
-                name={f.name}
-                label={f.label}
-                value={pantauanRoda[f.name]}
-                onChange={handlePantauanRodaChange}
-                fullWidth
-                size="small"
-                helperText={f.helper}
-                sx={{ mb: { xs: 2, md: 0 } }}
-              />
+              {f.type === 'date' ? (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label={f.label}
+                    value={pantauanRoda[f.name] || null}
+                    onChange={v => setPantauanRoda(pr => ({ ...pr, [f.name]: v }))}
+                    slotProps={{ textField: { fullWidth: true, size: 'small', helperText: f.helper } }}
+                  />
+                </LocalizationProvider>
+              ) : (
+                <TextField
+                  name={f.name}
+                  label={f.label}
+                  value={pantauanRoda[f.name]}
+                  onChange={handlePantauanRodaChange}
+                  fullWidth
+                  size="small"
+                  helperText={f.helper}
+                  sx={{ mb: { xs: 2, md: 0 } }}
+                />
+              )}
             </Grid>
           ))}
         </Grid>
@@ -704,7 +1280,7 @@ const PantauanRodaForm = (
               name="namaPemeriksa"
               label="Nama Pemeriksa"
               value={actionPlan.namaPemeriksa}
-              onChange={handleActionPlanChange}
+              onChange={e => setActionPlan(prev => ({ ...prev, namaPemeriksa: e.target.value }))}
               fullWidth
               size="small"
               helperText="Nama lengkap pemeriksa"
@@ -712,19 +1288,21 @@ const PantauanRodaForm = (
           </Grid>
           {/* Tanggal Pelaksanaan */}
           <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
-            <DatePicker
-              label="Tanggal Pelaksanaan"
-              value={actionPlan.tanggal}
-              onChange={handleActionPlanDateChange}
-              slotProps={{ textField: { fullWidth: true, size: 'small' } }}
-            />
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={idLocale}>
+              <DatePicker
+                label="Tanggal Pelaksanaan"
+                value={actionPlan.tanggal}
+                onChange={date => setActionPlan(prev => ({ ...prev, tanggal: date }))}
+                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+              />
+            </LocalizationProvider>
           </Grid>
           {/* Nomor Lokomotif */}
           <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
             <Autocomplete
               options={nomorLokomotifOptions}
               value={actionPlan.nomorLokomotif}
-              onChange={(_, v) => handleActionPlanSelectChange('nomorLokomotif', v)}
+              onChange={(e, value) => setActionPlan(prev => ({ ...prev, nomorLokomotif: value || '' }))}
               renderInput={(params) => <TextField {...params} label="Nomor Lokomotif" fullWidth size="small" helperText="Pilih nomor lokomotif" />}
               fullWidth
               disableClearable
@@ -736,7 +1314,7 @@ const PantauanRodaForm = (
             <Autocomplete
               options={komponenOptions}
               value={actionPlan.komponen}
-              onChange={(_, v) => handleActionPlanSelectChange('komponen', v)}
+              onChange={handleKomponenChange}
               renderInput={(params) => <TextField {...params} label="Komponen Action Plan" fullWidth size="small" helperText="Pilih komponen" />}
               fullWidth
               disableClearable
@@ -746,57 +1324,74 @@ const PantauanRodaForm = (
           {/* Aktivitas Action Plan */}
           <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
             <Autocomplete
-              options={aktivitasOptions}
+              options={laggingOptions}
               value={actionPlan.aktivitas}
-              onChange={(_, v) => handleActionPlanSelectChange('aktivitas', v)}
+              onChange={handleAktivitasChange}
               renderInput={(params) => <TextField {...params} label="Aktivitas Action Plan" fullWidth size="small" helperText="Pilih aktivitas" />}
+              fullWidth
+              disableClearable
+              autoHighlight
+              disabled={!actionPlan.komponen}
+            />
+          </Grid>
+          {/* Detail Aktivitas Action Plan */}
+          <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+            <Autocomplete
+              options={leadingOptions}
+              value={actionPlan.detailAktivitas}
+              onChange={handleDetailAktivitasChange}
+              renderInput={(params) => <TextField {...params} label="Detail Aktivitas Action Plan" fullWidth size="small" helperText="Pilih detail aktivitas" />}
+              fullWidth
+              disableClearable
+              autoHighlight
+              disabled={!actionPlan.komponen}
+            />
+          </Grid>
+          {/* Target */}
+          <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
+            <Autocomplete
+              options={targetOptions}
+              value={actionPlan.target}
+              onChange={handleTargetChange}
+              renderInput={(params) => <TextField {...params} label="Target" fullWidth size="small" helperText="Pilih target" />}
               fullWidth
               disableClearable
               autoHighlight
             />
           </Grid>
           {/* Upload Foto Action Plan */}
-          <Grid item xs={12} md={6} sx={{ minWidth: 0 }}>
-            <Box
-              onDrop={handleActionPlanDrop}
-              onDragOver={handleActionPlanDragOver}
-              sx={{
-                border: '2px dashed #2563eb',
-                borderRadius: 3,
-                p: 2,
-                textAlign: 'center',
-                bgcolor: '#f8fafc',
-                cursor: 'pointer',
-                minHeight: 120,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                transition: 'border-color 0.2s',
-                '&:hover': { borderColor: '#5de0e6' }
-              }}
-              onClick={() => document.getElementById('actionPlanFotoInput').click()}
+          <Grid item xs={12} md={6}>
+            <Button
+              variant="contained"
+              component="label"
+              fullWidth
+              sx={{ height: 56 }}
+              color={actionPlan.fotoError ? 'error' : 'primary'}
             >
+              {actionPlan.foto ? actionPlan.foto.name : 'Upload Foto (JPG/PNG)'}
               <input
-                id="actionPlanFotoInput"
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.png"
                 hidden
-                onChange={handleActionPlanFile}
+                onChange={handleFotoChange}
               />
-              <Box sx={{ mb: 1 }}>
-                <svg width="48" height="48" fill="none" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#2563eb" fillOpacity="0.08"/><path d="M16 32h16M24 16v16M24 16l-5 5M24 16l5 5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </Button>
+            {actionPlan.fotoError && (
+              <Typography color="error" variant="caption">{actionPlan.fotoError}</Typography>
+            )}
+            {actionPlan.fotoPreview && !actionPlan.fotoError && (
+              <Box mt={1}>
+                <img src={actionPlan.fotoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 120 }} />
               </Box>
-              <Typography variant="body2" color="#2563eb" fontWeight={600} sx={{ mb: 0.5 }}>Drag & Drop atau Klik untuk Upload Foto</Typography>
-              <Typography variant="caption" color="text.secondary">Maksimal 10MB, format gambar</Typography>
+            )}
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Box mt={2}>
               {actionPlan.foto && (
-                <Box mt={2}>
-                  <Typography variant="caption" color="#2563eb">{actionPlan.foto.name}</Typography>
-                  {actionPlan.fotoPreview && (
-                    <Box mt={1}><img src={actionPlan.fotoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 100, borderRadius: 6 }} /></Box>
-                  )}
-                </Box>
+                <Typography variant="caption" color="#2563eb">{actionPlan.foto.name}</Typography>
+              )}
+              {actionPlan.fotoPreview && (
+                <Box mt={1}><img src={actionPlan.fotoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 100, borderRadius: 6 }} /></Box>
               )}
               {actionPlan.fotoError && (
                 <Typography variant="caption" color="error">{actionPlan.fotoError}</Typography>

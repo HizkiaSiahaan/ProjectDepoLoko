@@ -25,6 +25,8 @@ import {
   MenuItem,
   Card,
   CardContent,
+  TextField,
+  Popover,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
@@ -251,7 +253,10 @@ export default function FaultHistory() {
   const [startDate, setStartDate] = useState(subDays(new Date(), 7));
   const [endDate, setEndDate] = useState(new Date());
   const [includeToday, setIncludeToday] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
+  
+  // ⚠️ NEW: Date Popover State
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
   
   // Selection states
   const [selectedLocos, setSelectedLocos] = useState([]);
@@ -270,6 +275,15 @@ export default function FaultHistory() {
   const [typePage, setTypePage] = useState(0);
   const [codePage, setCodePage] = useState(0);
   const perPage = 5;
+
+  // ⚠️ NEW: Date Popover Handlers (SESUAI PERFORMANCE PAGE)
+  const handleOpenPopover = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClosePopover = () => {
+    setAnchorEl(null);
+  };
 
   // Load dropdown options
   const loadDropdownOptions = useCallback(async () => {
@@ -470,7 +484,7 @@ export default function FaultHistory() {
   };
 
   return (
-    <Box p={3} position="relative">
+    <Box p={4}>
       {/* Error Snackbar */}
       <Snackbar 
         open={!!error} 
@@ -495,54 +509,137 @@ export default function FaultHistory() {
         </Alert>
       </Snackbar>
 
+      {/* Import Button Area - SESUAI PERFORMANCE PAGE */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Button
+          component="label"
+          variant="contained"
+          startIcon={importLoading ? <CircularProgress size={16} color="inherit" /> : <UploadFileIcon />}
+          disabled={importLoading}
+          sx={{ 
+            minWidth: 120, 
+            backgroundColor: '#2563eb', 
+            color: '#fff', 
+            boxShadow: 1, 
+            textTransform: 'none', 
+            mr: 2 
+          }}
+        >
+          {importLoading ? 'Importing...' : 'Import'}
+          <input
+            type="file"
+            accept=".csv"
+            hidden
+            onChange={handleImport}
+            disabled={importLoading}
+          />
+        </Button>
+      </Box>
+
       {/* Pareto Chart */}
       <ParetoChart data={faultData} loading={loading} />
 
-      {/* Filters */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mb: 2, gap: 2 }}>
+      {/* LAYOUT HORIZONTAL KOMPAK - SESUAI PERFORMANCE PAGE */}
+      <Box display="flex" flexWrap="wrap" gap={4} mb={2} alignItems="center">
         {/* Refresh Button */}
         <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
           onClick={handleRefresh}
           disabled={loading}
-          sx={{ minWidth: 120 }}
+          sx={{ 
+            minWidth: 120,
+            height: 56 // ⚠️ KONSISTEN HEIGHT
+          }}
         >
           {loading ? 'Loading...' : 'Refresh'}
         </Button>
 
-        {/* Filter by Date */}
-        <FormControl sx={{ minWidth: 180, maxWidth: 240, mr: 2 }}>
-          <Typography variant="subtitle2" mb={1}>Start Date</Typography>
-          <DatePicker
-            value={startDate}
-            onChange={(newValue) => setStartDate(newValue)}
-            format="dd MMMM yyyy"
-            slotProps={{
-              textField: {
-                size: 'medium',
-                sx: { backgroundColor: '#fff', borderRadius: 1, width: '100%' },
-              },
-            }}
-          />
-        </FormControl>
-        <FormControl sx={{ minWidth: 180, maxWidth: 240, mr: 2 }}>
-          <Typography variant="subtitle2" mb={1}>End Date</Typography>
-          <DatePicker
-            value={endDate}
-            onChange={(newValue) => setEndDate(newValue)}
-            format="dd MMMM yyyy"
-            slotProps={{
-              textField: {
-                size: 'medium',
-                sx: { backgroundColor: '#fff', borderRadius: 1, width: '100%' },
-              },
-            }}
-          />
-        </FormControl>
+        {/* ⚠️ DATE PICKER DENGAN POPOVER ORANGE - SESUAI PERFORMANCE PAGE */}
+        <TextField
+          label="Filter by Date"
+          variant="outlined"
+          value={
+            startDate && endDate
+              ? `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
+              : ""
+          }
+          onClick={handleOpenPopover}
+          InputProps={{ readOnly: true }}
+          sx={{ minWidth: 250, height: 56 }} // ⚠️ KONSISTEN HEIGHT
+        />
 
-        {/* Locomotive Number Filter */}
-        <FormControl sx={{ flex: 1, minWidth: 180, maxWidth: 240, height: 56, mr: 2 }}>
+        {/* ⚠️ POPOVER ORANGE - SESUAI PERFORMANCE PAGE! */}
+        <Popover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={handleClosePopover}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+          PaperProps={{
+            sx: {
+              p: 2,
+              backgroundColor: "#ffa726", // ⚠️ ORANGE SESUAI PERFORMANCE PAGE!
+              borderRadius: 2,
+              boxShadow: 3,
+              width: 300,
+            },
+          }}
+        >
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={includeToday}
+                onChange={(e) => setIncludeToday(e.target.checked)}
+              />
+            }
+            label="Include today"
+          />
+          <Box mb={2}>
+            <Typography variant="subtitle2">Start Date</Typography>
+            <DatePicker
+              value={startDate}
+              onChange={(newValue) => setStartDate(newValue)}
+              format="dd MMM yyyy"
+              slotProps={{
+                textField: {
+                  size: "small",
+                  sx: {
+                    backgroundColor: "#fff", // ⚠️ WHITE BACKGROUND SESUAI PERFORMANCE
+                    borderRadius: 1,
+                    width: "100%",
+                  },
+                },
+              }}
+            />
+          </Box>
+          <Box mb={2}>
+            <Typography variant="subtitle2">End Date</Typography>
+            <DatePicker
+              value={endDate}
+              onChange={(newValue) => setEndDate(newValue)}
+              format="dd MMM yyyy"
+              slotProps={{
+                textField: {
+                  size: "small",
+                  sx: {
+                    backgroundColor: "#fff", // ⚠️ WHITE BACKGROUND SESUAI PERFORMANCE
+                    borderRadius: 1,
+                    width: "100%",
+                  },
+                },
+              }}
+            />
+          </Box>
+          <Typography variant="body2" sx={{ color: "#fff", textAlign: "center" }}>
+            Range:{" "}
+            {startDate ? format(startDate, "dd MMM yyyy") : "-"} -{" "}
+            {endDate ? format(endDate, "dd MMM yyyy") : "-"}
+          </Typography>
+        </Popover>
+
+        {/* ⚠️ LOCOMOTIVE DROPDOWN - KONSISTEN HEIGHT & WIDTH */}
+        <FormControl sx={{ minWidth: 200, height: 56 }}>
           <InputLabel id="loco-filter-label">Locomotive Number</InputLabel>
           <Select
             labelId="loco-filter-label"
@@ -557,7 +654,7 @@ export default function FaultHistory() {
                   ? selected[0]
                   : `${selected.length} dipilih`
             }
-            sx={{ height: 56, display: 'flex', alignItems: 'center' }}
+            sx={{ height: 56 }}
           >
             {locomotives.map((loco) => (
               <MenuItem key={loco.locomotive_number} value={loco.locomotive_number}>
@@ -568,8 +665,8 @@ export default function FaultHistory() {
           </Select>
         </FormControl>
 
-        {/* Fault Type Filter */}
-        <FormControl sx={{ flex: 1, minWidth: 180, maxWidth: 240, height: 56, mr: 2 }}>
+        {/* ⚠️ FAULT TYPE DROPDOWN - KONSISTEN HEIGHT & WIDTH */}
+        <FormControl sx={{ minWidth: 200, height: 56 }}>
           <InputLabel id="fault-type-filter-label">Fault Type</InputLabel>
           <Select
             labelId="fault-type-filter-label"
@@ -584,7 +681,7 @@ export default function FaultHistory() {
                   ? selected[0]
                   : `${selected.length} dipilih`
             }
-            sx={{ height: 56, display: 'flex', alignItems: 'center' }}
+            sx={{ height: 56 }}
           >
             {faultTypes.map((type) => (
               <MenuItem key={type} value={type}>
@@ -595,8 +692,8 @@ export default function FaultHistory() {
           </Select>
         </FormControl>
 
-        {/* Fault Code Filter */}
-        <FormControl sx={{ flex: 1, minWidth: 180, maxWidth: 240, height: 56, mr: 2 }}>
+        {/* ⚠️ FAULT CODE DROPDOWN - HANYA TAMPILKAN CODE (TIDAK DESCRIPTION) */}
+        <FormControl sx={{ minWidth: 200, height: 56 }}>
           <InputLabel id="fault-code-filter-label">Fault Code</InputLabel>
           <Select
             labelId="fault-code-filter-label"
@@ -611,12 +708,13 @@ export default function FaultHistory() {
                   ? selected[0]
                   : `${selected.length} dipilih`
             }
-            sx={{ height: 56, display: 'flex', alignItems: 'center' }}
+            sx={{ height: 56 }}
           >
             {faultCodes.map((code) => (
               <MenuItem key={code.fault_code} value={code.fault_code}>
                 <Checkbox checked={selectedFaultCodes.indexOf(code.fault_code) > -1} />
-                <ListItemText primary={`${code.fault_code} - ${code.fault_description}`} />
+                {/* ⚠️ HANYA TAMPILKAN CODE, TIDAK DESCRIPTION */}
+                <ListItemText primary={code.fault_code} />
               </MenuItem>
             ))}
           </Select>
@@ -668,35 +766,6 @@ export default function FaultHistory() {
           />
         </Grid>
       </Grid>
-
-      {/* Import Button Area */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-        <Button
-          component="label"
-          variant="contained"
-          startIcon={importLoading ? <CircularProgress size={16} color="inherit" /> : <UploadFileIcon />}
-          disabled={importLoading}
-          sx={{ minWidth: 120, backgroundColor: '#2563eb', color: '#fff', boxShadow: 1, textTransform: 'none', mr: 2 }}
-        >
-          {importLoading ? 'Importing...' : 'Import'}
-          <input
-            type="file"
-            accept=".csv"
-            hidden
-            onChange={handleImport}
-            disabled={importLoading}
-          />
-        </Button>
-        
-        {loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-            <CircularProgress size={20} sx={{ mr: 1 }} />
-            <Typography variant="body2" color="text.secondary">
-              Loading data...
-            </Typography>
-          </Box>
-        )}
-      </Box>
 
       {/* Main Data Table */}
       <TableContainer component={Paper} sx={{ maxHeight: 400, overflowY: 'auto' }}>

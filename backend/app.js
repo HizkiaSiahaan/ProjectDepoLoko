@@ -34,5 +34,6 @@ app.use('/api/locomotives', require('./routes/locomotiveRoutes'));
 app.use('/api/performance', require('./routes/performanceRoutes'));
 app.use('/api/fault-history', require('./routes/faultHistoryRoutes'));
 app.use('/api/component-usage', require('./routes/componentUsage'));
+app.use('/api/tasks', require('./routes/taskRoutes'));
 
 app.listen(3001, () => console.log('Server running on port 3001'));

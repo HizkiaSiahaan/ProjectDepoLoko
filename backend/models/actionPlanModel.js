@@ -14,13 +14,27 @@ exports.getActionPlanById = async (id) => {
 
 // CREATE action plan
 exports.createActionPlan = async (data) => {
+  // Jangan destruktur pic langsung, ambil dari data.pic
   const {
-    nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, prioritas, status, target_date, completed_date, foto_path, keterangan
+    nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, detail_aktivitas, target, foto_path
   } = data;
+  let pic = data.pic;
+  console.log('[DEBUG] typeof data.pic:', typeof pic, '| value:', pic);
+  // Jika pic string kosong, null, atau 'null' (string), ubah ke null
+  if (typeof pic === 'string') {
+    if (!pic.trim() || pic.trim().toLowerCase() === 'null') {
+      pic = null;
+    } else {
+      pic = pic.trim();
+    }
+  } else if (!pic) {
+    pic = null;
+  }
+  console.log('[DEBUG] Insert Action Plan:', { ...data, pic });
   const result = await db.query(
-    `INSERT INTO action_plan (nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, prioritas, status, target_date, completed_date, foto_path, keterangan)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-    [nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, prioritas, status, target_date, completed_date, foto_path, keterangan]
+    `INSERT INTO action_plan (nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, detail_aktivitas, pic, target, foto_path)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [nama_pemeriksa, tanggal, nomor_lokomotif, komponen, aktivitas, detail_aktivitas, pic, target, foto_path]
   );
   return result.rows[0];
 };

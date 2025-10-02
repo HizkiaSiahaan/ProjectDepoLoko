@@ -18,6 +18,7 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { format } from "date-fns";
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import RefreshIcon from '@mui/icons-material/Refresh'; // ⚠️ ADD Refresh icon
 import {
   LineChart,
   Line,
@@ -95,7 +96,7 @@ const columnConfig = {
 
 // Reference values untuk setiap kolom
 const referenceValues = {
-  "apcclb": { min: 8.0, ideal: 8.4, max: 9.0 }, // ⚠️ ADJUSTED to match actual data
+  "apcclb": { min: 8.0, ideal: 8.4, max: 9.0 },
   "apimrb": { min: 248.21, ideal: 268.9, max: 289.58 },
   "opturps": { min: 517.10, ideal: 586.05, max: 655 },
   "wpegilp": { min: 379.21, ideal: 448.15, max: 517.10 },
@@ -109,14 +110,24 @@ const referenceValues = {
   "ca_v": { min: 228, ideal: 235, max: 242 }
 };
 
+const handleRefreshData = () => {
+  if (selectedLocomotives.length > 0) {
+    console.log('🔄 Manual refresh triggered for:', selectedLocomotives);
+    fetchChartData();
+  } else {
+    setError("Please select at least one locomotive to refresh data.");
+  }
+};
+
+
 export default function PerformanceHistory() {
   const [locomotives, setLocomotives] = useState([]);
   const [loadingChart, setLoadingChart] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [error, setError] = useState(null);
 
-  const [startDate, setStartDate] = useState(new Date('2024-01-01'));
-  const [endDate, setEndDate] = useState(new Date('2024-12-31'));
+  const [startDate, setStartDate] = useState(new Date('2025-01-01'));  // ⚠️ UPDATED to 2025
+  const [endDate, setEndDate] = useState(new Date('2025-12-31'));    // ⚠️ UPDATED to 2025
   const [includeToday, setIncludeToday] = useState(false);
   
   const [selectedLocomotives, setSelectedLocomotives] = useState([]);
@@ -147,40 +158,28 @@ export default function PerformanceHistory() {
     fetchLocomotives();
   }, []);
 
-  // ⚠️ KEYBOARD shortcuts untuk Select All
+  // ⚠️ AUTO-TRIGGER FILTERING ketika locomotives dimuat
   useEffect(() => {
-    const handleKeyPress = (e) => {
-      // Ctrl+A or Cmd+A untuk select all
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        handleSelectAllLocomotives(e);
+    if (locomotives.length > 0 && currentTab) {
+      // Auto-select first 5 locomotives jika belum ada selection
+      if (selectedLocomotives.length === 0) {
+        const firstFiveLocos = locomotives.slice(0, 5).map(loco => loco.locomotive_number);
+        setSelectedLocomotives(firstFiveLocos);
       }
-      // Ctrl+D or Cmd+D untuk clear all
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        handleClearAllLocomotives(e);
-      }
-    };
+    }
+  }, [locomotives, currentTab]);
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [locomotives]);
+  // ⚠️ AUTO-TRIGGER FILTERING ketika selection berubah
   useEffect(() => {
     if (locomotives.length > 0 && selectedLocomotives.length > 0 && currentTab) {
       console.log('🔄 Auto-fetching data for:', {
         locomotives: selectedLocomotives.length,
-        tab: currentTab
+        tab: currentTab,
+        selected: selectedLocomotives
       });
       fetchChartData();
     }
-  }, [locomotives, currentTab]); // ⚠️ REMOVED selectedLocomotives dependency to prevent auto-fetch on selection change
-
-  // ⚠️ NEW: Manual fetch trigger ketika selection berubah
-  const handleFetchWithCurrentSelection = () => {
-    if (selectedLocomotives.length > 0) {
-      fetchChartData();
-    }
-  };
+  }, [selectedLocomotives, currentTab, startDate, endDate]); // ⚠️ TRIGGER pada selection, tab, atau date change
 
   const fetchChartData = async () => {
     setLoadingChart(true);
@@ -204,28 +203,19 @@ export default function PerformanceHistory() {
       if (res.data.success) {
         const processedData = [];
         
-        console.log('🔍 Backend data structure:', res.data.data);
-        console.log('🔍 Data type:', typeof res.data.data);
-        
         if (res.data.data && typeof res.data.data === 'object') {
           Object.entries(res.data.data).forEach(([locoKey, locoObject]) => {
-            console.log(`🚂 Processing Locomotive ${locoKey}:`, locoObject);
-            
-            // ⚠️ FIX: Backend structure is { "locomotive_CC201-01": { data: [...] } }
             if (locoObject && locoObject.data && Array.isArray(locoObject.data)) {
               locoObject.data.forEach((item, index) => {
-                
-                // ⚠️ FIX: Item structure is { timestamp, value }
                 if (item && item.value !== undefined && item.value !== null) {
                   const dataPoint = {
                     locomotive_number: locoObject.locomotive_number,
-                    value: parseFloat(item.value), // ⚠️ FIX: Use item.value instead of item[currentTab]
-                    recorded_at: item.timestamp, // ⚠️ FIX: Use item.timestamp instead of item.recorded_at
+                    value: parseFloat(item.value),
+                    recorded_at: item.timestamp,
                     date: format(new Date(item.timestamp), 'MMM dd HH:mm'),
                     locomotive_id: locoObject.locomotive_id
                   };
                   
-                  console.log(`📊 Data point ${index}:`, dataPoint);
                   processedData.push(dataPoint);
                 }
               });
@@ -281,713 +271,382 @@ export default function PerformanceHistory() {
     setAnchorEl(null);
   };
 
-  const handleSelectAllLocomotives = (e) => {
-    e.stopPropagation(); // ⚠️ PREVENT dropdown close
-    const allLocoNumbers = locomotives.map(l => l.locomotive_number);
-    setSelectedLocomotives(allLocoNumbers);
-    console.log('✅ Selected all locomotives:', allLocoNumbers.length);
-  };
-
-  const handleClearAllLocomotives = (e) => {
-    e.stopPropagation(); // ⚠️ PREVENT dropdown close  
-    setSelectedLocomotives([]);
-    console.log('🗑️ Cleared all locomotives');
-  };
-
   return (
-    <Box sx={{ 
-      p: { xs: 2, md: 4 }, 
-      backgroundColor: '#f8fafc',
-      minHeight: '100vh'
-    }}>
-      {/* Header Section */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 4,
-        flexWrap: 'wrap',
-        gap: 2
-      }}>
-        <Typography 
-          variant="h4" 
+    <Box p={4}>
+      {/* Import Button Area - SESUAI ORIGINAL */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <Button
+          component="label"
+          variant="contained"
+          startIcon={<UploadFileIcon />}
           sx={{ 
-            fontWeight: 700, 
-            color: '#1e293b',
-            fontSize: { xs: '1.5rem', md: '2rem' }
+            minWidth: 120, 
+            backgroundColor: '#2563eb', 
+            color: '#fff', 
+            boxShadow: 1, 
+            textTransform: 'none', 
+            mr: 2 
           }}
         >
-          Performance Monitoring
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Button
-            component="label"
-            variant="contained"
-            startIcon={<UploadFileIcon />}
-            sx={{ 
-              backgroundColor: '#3b82f6', 
-              '&:hover': { backgroundColor: '#2563eb' },
-              textTransform: 'none',
-              borderRadius: 2,
-              px: 3
-            }}
-          >
-            Import CSV
-            <input
-              type="file"
-              accept=".csv"
-              hidden
-              onChange={handleImport}
-            />
-          </Button>
-          
-          <Button
-            variant="contained"
-            onClick={fetchChartData}
-            disabled={loadingChart || selectedLocomotives.length === 0}
-            sx={{ 
-              backgroundColor: '#10b981', 
-              '&:hover': { backgroundColor: '#059669' },
-              textTransform: 'none',
-              borderRadius: 2,
-              px: 3
-            }}
-          >
-            {loadingChart ? "Loading..." : "Refresh Data"}
-          </Button>
-        </Box>
+          Import
+          <input
+            type="file"
+            accept=".csv"
+            hidden
+            onChange={handleImport}
+          />
+        </Button>
       </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Box sx={{ 
-          backgroundColor: '#fef2f2', 
-          border: '1px solid #fecaca',
-          borderRadius: 2,
-          p: 3,
-          mb: 3,
-          color: '#dc2626'
-        }}>
-          <Typography variant="body2" fontWeight={500}>
-            ⚠️ {error}
-          </Typography>
-        </Box>
-      )}
+      {/* Tabs - SESUAI ORIGINAL */}
+      <Tabs
+        value={activeTab}
+        onChange={(e, newVal) => setActiveTab(newVal)}
+        textColor="primary"
+        variant="scrollable"
+        scrollButtons="auto"
+        allowScrollButtonsMobile
+        sx={{ mb: 2 }}
+      >
+        {availableColumns.map((columnKey, idx) => (
+          <Tab 
+            label={columnConfig[columnKey].label} 
+            key={columnKey} 
+            sx={{ textTransform: 'none' }} 
+          />
+        ))}
+      </Tabs>
 
-      {/* Performance Tabs */}
-      <Card sx={{ 
-        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', 
-        borderRadius: 3,
-        border: '1px solid #e2e8f0',
-        mb: 3
-      }}>
-        <Tabs
-          value={activeTab}
-          onChange={(e, newVal) => setActiveTab(newVal)}
-          variant="scrollable"
-          scrollButtons="auto"
-          allowScrollButtonsMobile
-          sx={{ 
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontWeight: 500,
-              fontSize: '0.9rem',
-              minHeight: 60,
-              '&.Mui-selected': {
-                color: '#3b82f6',
-                fontWeight: 600
+      {/* Main Card - SESUAI ORIGINAL */}
+      <Card sx={{ px: 4, py: 3, mt: 1, boxShadow: 3, borderRadius: 3 }}>
+        <CardContent>
+          {/* Filter Section - LAYOUT HORIZONTAL KOMPAK SESUAI ORIGINAL */}
+          <Box display="flex" flexWrap="wrap" gap={4} mb={2} alignItems="center">
+            {/* Filter by Date Trigger - SESUAI ORIGINAL */}
+            <TextField
+              label="Filter by Date"
+              variant="outlined"
+              value={
+                startDate && endDate
+                  ? `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
+                  : ""
               }
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#3b82f6',
-              height: 3,
-              borderRadius: 2
-            }
-          }}
-        >
-          {availableColumns.map((columnKey, idx) => (
-            <Tab 
-              label={columnConfig[columnKey].label} 
-              key={columnKey}
+              onClick={handleOpenPopover}
+              InputProps={{ readOnly: true }}
+              sx={{ minWidth: 250 }}
             />
-          ))}
-        </Tabs>
-      </Card>
 
-      {/* Main Chart Card */}
-      <Card sx={{ 
-        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', 
-        borderRadius: 3,
-        border: '1px solid #e2e8f0',
-        overflow: 'hidden'
-      }}>
-        <CardContent sx={{ p: 0 }}>
-          {/* Filter Controls */}
-          <Box sx={{ 
-            p: 4, 
-            backgroundColor: '#f8fafc', 
-            borderBottom: '1px solid #e2e8f0' 
-          }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                mb: 3, 
-                fontWeight: 600, 
-                color: '#1e293b' 
+            {/* POPOVER ORANGE - SESUAI ORIGINAL! */}
+            <Popover
+              open={open}
+              anchorEl={anchorEl}
+              onClose={handleClosePopover}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              PaperProps={{
+                sx: {
+                  p: 2,
+                  backgroundColor: "#ffa726", // ⚠️ ORANGE BACKGROUND SESUAI ORIGINAL!
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  width: 300,
+                },
               }}
             >
-              Filters & Settings
-            </Typography>
-            
-            <Box sx={{ 
-              display: 'flex', 
-              flexWrap: 'wrap', 
-              gap: 3, 
-              alignItems: 'center' 
-            }}>
-              {/* Date Filter */}
-              <Box sx={{ minWidth: 280 }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#64748b' }}>
-                  Date Range
-                </Typography>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  value={
-                    startDate && endDate
-                      ? `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
-                      : ""
-                  }
-                  onClick={handleOpenPopover}
-                  InputProps={{ 
-                    readOnly: true,
-                    startAdornment: (
-                      <Box sx={{ mr: 1, color: '#64748b' }}>📅</Box>
-                    )
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: '#fff',
-                      '&:hover': {
-                        borderColor: '#3b82f6',
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={includeToday}
+                    onChange={(e) => setIncludeToday(e.target.checked)}
+                  />
+                }
+                label="Include today"
+              />
+              <Box mb={2}>
+                <Typography variant="subtitle2">Start Date</Typography>
+                <DatePicker
+                  value={startDate}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  format="dd MMM yyyy"
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      sx: {
+                        backgroundColor: "#fff", // ⚠️ WHITE BACKGROUND SESUAI ORIGINAL
+                        borderRadius: 1,
+                        width: "100%",
                       },
-                      '&.Mui-focused': {
-                        borderColor: '#3b82f6',
-                      }
-                    }
+                    },
                   }}
                 />
               </Box>
+              <Box mb={2}>
+                <Typography variant="subtitle2">End Date</Typography>
+                <DatePicker
+                  value={endDate}
+                  onChange={(newValue) => setEndDate(newValue)}
+                  format="dd MMM yyyy"
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      sx: {
+                        backgroundColor: "#fff", // ⚠️ WHITE BACKGROUND SESUAI ORIGINAL
+                        borderRadius: 1,
+                        width: "100%",
+                      },
+                    },
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ color: "#fff", textAlign: "center" }}>
+                Range:{" "}
+                {startDate ? format(startDate, "dd MMM yyyy") : "-"} -{" "}
+                {endDate ? format(endDate, "dd MMM yyyy") : "-"}
+              </Typography>
+            </Popover>
 
-              {/* Locomotive Selector */}
-              <Box sx={{ minWidth: 320 }}>
-                <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, color: '#64748b' }}>
-                  Locomotives ({locomotives.length} available)
-                </Typography>
-                <Select
-                  fullWidth
-                  value={selectedLocomotives}
-                  multiple
-                  onChange={(e) => {
-                    console.log('🔄 Select onChange triggered:', e.target.value);
-                    setSelectedLocomotives(e.target.value);
-                  }}
-                  renderValue={(selected) => {
-                    if (selected.length === 0) return 'Select locomotives';
-                    if (selected.length === locomotives.length) return `All locomotives selected (${locomotives.length})`;
-                    return `${selected.length} locomotives selected`;
-                  }}
-                  sx={{
+            {/* Locomotive Number Dropdown - FIXED INSIDE DROPDOWN ONLY */}
+            <Select
+              value={selectedLocomotives}
+              multiple
+              displayEmpty
+              onChange={(e) => setSelectedLocomotives(e.target.value)}
+              renderValue={(selected) => {
+                if (selected.length === 0) return 'Locomotive Number';
+                if (selected.length === locomotives.length) return `All locomotives selected (${locomotives.length})`;
+                if (selected.length === 1) return selected[0];
+                return `${selected.length} locomotives selected`;
+              }}
+              sx={{ minWidth: 200 }}
+              MenuProps={{
+                PaperProps: {
+                  sx: { 
+                    maxHeight: 400,
                     borderRadius: 2,
-                    backgroundColor: '#fff',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#d1d5db',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#3b82f6',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#3b82f6',
-                    }
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: { 
-                        maxHeight: 400,
-                        borderRadius: 2,
-                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                      }
-                    }
-                  }}
-                >
-                  {/* ⚠️ FIXED: Clear All Button */}
-                  <MenuItem 
-                    onClick={handleClearAllLocomotives}
-                    sx={{ 
-                      borderBottom: '1px solid #e2e8f0',
-                      backgroundColor: '#fef2f2',
-                      '&:hover': { backgroundColor: '#fee2e2' }
+                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                  }
+                }
+              }}
+            > 
+              {/* Individual Locomotives */}
+              {locomotives.map(loco => (
+                <MenuItem key={loco.id} value={loco.locomotive_number}>
+                  <Checkbox 
+                    checked={selectedLocomotives.indexOf(loco.locomotive_number) > -1}
+                    sx={{
+                      color: '#2563eb', // ⚠️ FIXED: Blue color sesuai theme
+                      '&.Mui-checked': { color: '#2563eb' },
                     }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', color: '#ef4444', fontWeight: 500 }}>
-                      🗑️ Clear All Selection
-                    </Box>
-                  </MenuItem>
-                  
-                  {/* ⚠️ FIXED: Select All Button */}
-                  <MenuItem 
-                    onClick={handleSelectAllLocomotives}
-                    sx={{ 
-                      fontWeight: 600, 
-                      color: '#3b82f6',
-                      borderBottom: '1px solid #e2e8f0',
-                      backgroundColor: '#eff6ff',
-                      '&:hover': { backgroundColor: '#dbeafe' }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      ✅ Select All ({locomotives.length} locomotives)
-                    </Box>
-                  </MenuItem>
-                  
-                  {/* ⚠️ Individual Locomotives */}
-                  {locomotives.map(loco => (
-                    <MenuItem key={loco.id} value={loco.locomotive_number}>
-                      <Checkbox 
-                        checked={selectedLocomotives.indexOf(loco.locomotive_number) > -1}
-                        sx={{
-                          color: '#3b82f6',
-                          '&.Mui-checked': {
-                            color: '#3b82f6',
-                          },
-                        }}
-                      />
-                      <Typography sx={{ ml: 1, fontSize: '0.875rem' }}>
-                        {loco.locomotive_number}
-                      </Typography>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </Box>
+                  />
+                  <Typography sx={{ ml: 1, fontSize: '0.875rem' }}>
+                    {loco.locomotive_number}
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Select>
 
-              {/* Quick Action Buttons */}
+            {/* ⚠️ ADD: Status Display untuk feedback visual */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 1,
+              minWidth: 200 
+            }}>
               <Box sx={{ 
                 display: 'flex', 
-                flexDirection: 'column',
-                gap: 1,
-                minWidth: 160
+                justifyContent: 'space-between',
+                backgroundColor: '#fff',
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                border: '1px solid #e2e8f0'
               }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleSelectAllLocomotives}
-                  disabled={selectedLocomotives.length === locomotives.length}
-                  sx={{ 
-                    textTransform: 'none',
-                    borderColor: '#3b82f6',
-                    color: '#3b82f6',
-                    '&:hover': {
-                      backgroundColor: '#eff6ff',
-                      borderColor: '#2563eb'
-                    }
-                  }}
-                >
-                  ✅ Select All ({locomotives.length})
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleClearAllLocomotives}
-                  disabled={selectedLocomotives.length === 0}
-                  sx={{ 
-                    textTransform: 'none',
-                    borderColor: '#ef4444',
-                    color: '#ef4444',
-                    '&:hover': {
-                      backgroundColor: '#fef2f2',
-                      borderColor: '#dc2626'
-                    }
-                  }}
-                >
-                  🗑️ Clear All
-                </Button>
+                <Typography variant="body2" color="#64748b">Data Points:</Typography>
+                <Typography variant="body2" fontWeight={600}>{chartData.length}</Typography>
               </Box>
               <Box sx={{ 
                 display: 'flex', 
-                flexDirection: 'column', 
-                gap: 1,
-                minWidth: 200 
+                justifyContent: 'space-between',
+                backgroundColor: selectedLocomotives.length === locomotives.length ? '#dcfce7' : 
+                               selectedLocomotives.length > 0 ? '#eff6ff' : '#fff',
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                border: `1px solid ${
+                  selectedLocomotives.length === locomotives.length ? '#22c55e' : 
+                  selectedLocomotives.length > 0 ? '#2563eb' : '#e2e8f0'
+                }`
               }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  backgroundColor: '#fff',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <Typography variant="body2" color="#64748b">Data Points:</Typography>
-                  <Typography variant="body2" fontWeight={600}>{chartData.length}</Typography>
-                </Box>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  backgroundColor: selectedLocomotives.length === locomotives.length ? '#dcfce7' : '#fff',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  border: `1px solid ${selectedLocomotives.length === locomotives.length ? '#22c55e' : '#e2e8f0'}`
-                }}>
-                  <Typography variant="body2" color="#64748b">
-                    {selectedLocomotives.length === locomotives.length ? '✅ All Selected:' : 'Selected:'}
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    fontWeight={600}
-                    color={selectedLocomotives.length === locomotives.length ? '#22c55e' : 'inherit'}
-                  >
-                    {selectedLocomotives.length}/{locomotives.length}
-                  </Typography>
-                </Box>
+                <Typography variant="body2" color="#64748b">
+                  {selectedLocomotives.length === locomotives.length ? '✅ All Selected:' : 
+                   selectedLocomotives.length > 0 ? '🎯 Selected:' : 'Selected:'}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  fontWeight={600}
+                  color={
+                    selectedLocomotives.length === locomotives.length ? '#22c55e' : 
+                    selectedLocomotives.length > 0 ? '#2563eb' : 'inherit'
+                  }
+                >
+                  {selectedLocomotives.length}/{locomotives.length}
+                </Typography>
               </Box>
             </Box>
           </Box>
 
-          {/* Date Picker Popover */}
-          <Popover
-            open={open}
-            anchorEl={anchorEl}
-            onClose={handleClosePopover}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-            transformOrigin={{ vertical: "top", horizontal: "left" }}
-            PaperProps={{
-              sx: {
-                p: 3,
-                borderRadius: 3,
-                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                border: '1px solid #e2e8f0',
-                minWidth: 320,
-              },
-            }}
-          >
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              Select Date Range
-            </Typography>
-            
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={includeToday}
-                  onChange={(e) => setIncludeToday(e.target.checked)}
-                  sx={{
-                    color: '#3b82f6',
-                    '&.Mui-checked': { color: '#3b82f6' },
-                  }}
-                />
-              }
-              label="Include today"
-              sx={{ mb: 2 }}
-            />
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-                Start Date
-              </Typography>
-              <DatePicker
-                value={startDate}
-                onChange={(newValue) => setStartDate(newValue)}
-                format="dd MMM yyyy"
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      }
-                    },
-                  },
-                }}
-              />
-            </Box>
-            
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-                End Date
-              </Typography>
-              <DatePicker
-                value={endDate}
-                onChange={(newValue) => setEndDate(newValue)}
-                format="dd MMM yyyy"
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    sx: {
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      }
-                    },
-                  },
-                }}
-              />
-            </Box>
-            
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 2,
-              backgroundColor: '#f1f5f9',
-              borderRadius: 2,
-              mt: 2
-            }}>
-              <Typography variant="body2" fontWeight={500}>
-                Selected Range:
-              </Typography>
-              <Typography variant="body2" color="#64748b">
-                {startDate && endDate
-                  ? `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
-                  : "No range selected"}
-              </Typography>
-            </Box>
-          </Popover>
+          {/* Chart Title - SESUAI ORIGINAL */}
+          <Typography variant="h6" fontWeight="bold" textAlign="center" mb={2}>
+            {columnConfig[currentTab]?.title || ''}
+          </Typography>
 
-          {/* Chart Area */}
-          <Box sx={{ p: 4 }}>
-            {/* Chart Header */}
-            <Box sx={{ mb: 3, textAlign: 'center' }}>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  fontWeight: 600, 
-                  color: '#1e293b',
-                  mb: 1 
-                }}
-              >
-                {columnConfig[currentTab]?.label || currentTab.toUpperCase()}
-              </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: '#64748b',
-                  maxWidth: 800,
-                  mx: 'auto',
-                  lineHeight: 1.6
-                }}
-              >
-                {columnConfig[currentTab]?.title || ''}
-              </Typography>
-            </Box>
-
-            {/* Loading State */}
-            {loadingChart && (
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: 400,
-                flexDirection: 'column',
-                gap: 2
-              }}>
+          {/* Chart Area - HORIZONTAL SCROLLABLE SESUAI ORIGINAL */}
+          <Box sx={{ width: '100%', overflowX: 'auto', paddingRight: 10 }}>
+            <Box sx={{ minWidth: 3000, pr: 10 }}>
+              {loadingChart ? (
                 <Box sx={{ 
-                  width: 40, 
-                  height: 40, 
-                  border: '4px solid #e2e8f0',
-                  borderTop: '4px solid #3b82f6',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite',
-                  '@keyframes spin': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' },
-                  }
-                }} />
-                <Typography color="#64748b">Loading performance data...</Typography>
-              </Box>
-            )}
-
-            {/* Chart */}
-            {!loadingChart && chartData.length > 0 && (
-              <Box sx={{ 
-                backgroundColor: '#fff',
-                borderRadius: 2,
-                border: '1px solid #e2e8f0',
-                p: 2
-              }}>
-                <ResponsiveContainer width="100%" height={500}>
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  height: 600,
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  border: '2px dashed #cbd5e1'
+                }}>
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 40, 
+                    border: '4px solid #e2e8f0',
+                    borderTop: '4px solid #2563eb',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    '@keyframes spin': {
+                      '0%': { transform: 'rotate(0deg)' },
+                      '100%': { transform: 'rotate(360deg)' },
+                    }
+                  }} />
+                  <Typography variant="h6" sx={{ color: '#64748b', mt: 2 }}>
+                    Loading performance data...
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', maxWidth: 400, mt: 1 }}>
+                    Fetching data for {selectedLocomotives.length} locomotive{selectedLocomotives.length !== 1 ? 's' : ''}: {selectedLocomotives.join(', ')}
+                  </Typography>
+                </Box>
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width={3000} height={600}>
                   <LineChart 
                     data={chartData} 
-                    margin={{ top: 20, right: 60, left: 60, bottom: 80 }}
+                    margin={{ top: 20, right: 200, left: 0, bottom: 120 }}
                   >
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      stroke="#e2e8f0" 
-                      strokeOpacity={0.6}
-                    />
-                    
+                    <CartesianGrid strokeDasharray="3 3" />
+                    {/* ⚠️ FIXED: X-axis menggunakan locomotive_number bukan date */}
                     <XAxis 
-                      dataKey="date"
+                      dataKey="locomotive_number"  // ⚠️ CHANGED from "date" to "locomotive_number"
                       angle={-45} 
                       textAnchor="end" 
                       height={80} 
-                      interval="preserveStartEnd"
-                      fontSize={11}
-                      stroke="#64748b"
-                      axisLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
-                      tickLine={{ stroke: '#cbd5e1' }}
+                      interval={0} 
                     />
-                    
-                    <YAxis 
-                      domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                      tickFormatter={(value) => Number(value).toFixed(1)}
-                      fontSize={11}
-                      stroke="#64748b"
-                      axisLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
-                      tickLine={{ stroke: '#cbd5e1' }}
-                      label={{ 
-                        value: columnConfig[currentTab]?.unit || 'Value', 
-                        angle: -90, 
-                        position: 'insideLeft',
-                        style: { textAnchor: 'middle', fontSize: '12px', fill: '#64748b' }
-                      }}
-                    />
-                    
+                    <YAxis domain={['dataMin - 0.5', 'dataMax + 0.5']} />
                     <Tooltip
-                      formatter={(value, name, props) => [
-                        `${Number(value).toFixed(2)} ${columnConfig[currentTab]?.unit || ''}`, 
-                        props.payload.locomotive_number || 'Value'
-                      ]}
-                      labelFormatter={(label) => `Time: ${label}`}
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                        fontSize: '13px'
-                      }}
-                      labelStyle={{ color: '#1e293b', fontWeight: 600 }}
+                      formatter={(value) => [`${value}`, "Value"]}
+                      labelFormatter={(label) => `Locomotive: ${label}`}  // ⚠️ UPDATED label
                     />
                     
-                    {/* Reference Lines */}
+                    {/* Reference Lines - WARNA SESUAI ORIGINAL */}
                     {referenceValues[currentTab] && (
                       <>
                         <ReferenceLine 
                           y={referenceValues[currentTab].max} 
-                          stroke="#ef4444" 
-                          strokeDasharray="8 4"
-                          strokeWidth={2}
+                          stroke="#f48fb1" 
                           label={{ 
                             value: `Max (${referenceValues[currentTab].max})`, 
-                            position: "topRight",
-                            style: { 
-                              fill: '#ef4444', 
-                              fontWeight: '600',
-                              fontSize: '11px',
-                              backgroundColor: '#fff',
-                              padding: '4px 8px',
-                              borderRadius: '4px'
-                            }
-                          }}
+                            position: "right", 
+                            fill: "#f48fb1", 
+                            fontWeight: "bold" 
+                          }} 
                         />
-                        
                         <ReferenceLine 
                           y={referenceValues[currentTab].ideal} 
-                          stroke="#10b981" 
-                          strokeDasharray="8 4"
-                          strokeWidth={2}
+                          stroke="#4caf50" 
                           label={{ 
                             value: `Ideal Average (${referenceValues[currentTab].ideal})`, 
-                            position: "topRight",
-                            style: { 
-                              fill: '#10b981', 
-                              fontWeight: '600',
-                              fontSize: '11px',
-                              backgroundColor: '#fff',
-                              padding: '4px 8px',
-                              borderRadius: '4px'
-                            }
-                          }}
+                            position: "right", 
+                            fill: "#4caf50", 
+                            fontWeight: "bold" 
+                          }} 
                         />
-                        
                         <ReferenceLine 
                           y={referenceValues[currentTab].min} 
-                          stroke="#ef4444" 
-                          strokeDasharray="8 4"
-                          strokeWidth={2}
+                          stroke="#f44336" 
                           label={{ 
                             value: `Min (${referenceValues[currentTab].min})`, 
-                            position: "topRight",
-                            style: { 
-                              fill: '#ef4444', 
-                              fontWeight: '600',
-                              fontSize: '11px',
-                              backgroundColor: '#fff',
-                              padding: '4px 8px',
-                              borderRadius: '4px'
-                            }
-                          }}
+                            position: "right", 
+                            fill: "#f44336", 
+                            fontWeight: "bold" 
+                          }} 
                         />
                       </>
                     )}
                     
-                    {/* Data Line */}
+                    {/* Line Chart - WARNA SESUAI ORIGINAL */}
                     <Line 
                       type="monotone" 
-                      dataKey="value"
-                      stroke="#8b5cf6"
-                      strokeWidth={2.5}
+                      dataKey="value" 
+                      stroke="#6A1B9A" 
+                      strokeWidth={2} 
                       dot={{ 
-                        fill: '#8b5cf6', 
+                        fill: "#6A1B9A", 
                         strokeWidth: 0, 
-                        r: 3,
-                        fillOpacity: 0.8
+                        r: 4 
                       }}
                       activeDot={{ 
-                        r: 5, 
-                        fill: '#8b5cf6',
-                        stroke: '#fff',
+                        r: 6, 
+                        fill: "#6A1B9A",
+                        stroke: "#fff",
                         strokeWidth: 2
                       }}
-                      connectNulls={false}
-                      name={columnConfig[currentTab]?.label}
                     />
-                    
                   </LineChart>
                 </ResponsiveContainer>
-              </Box>
-            )}
-
-            {/* Empty State */}
-            {!loadingChart && chartData.length === 0 && (
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: 400,
-                backgroundColor: '#f8fafc',
-                borderRadius: 2,
-                border: '2px dashed #cbd5e1'
-              }}>
-                <Typography variant="h6" sx={{ color: '#64748b', mb: 1 }}>
-                  📊 No Data Available
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', maxWidth: 400 }}>
-                  No performance data found for the selected locomotives and date range. 
-                  Try adjusting your filters or importing new data.
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  onClick={fetchChartData}
-                  sx={{ mt: 2, textTransform: 'none' }}
-                >
-                  🔄 Retry
-                </Button>
-              </Box>
-            )}
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 600,
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 2,
+                  border: '2px dashed #cbd5e1'
+                }}>
+                  <Typography variant="h6" sx={{ color: '#64748b', mb: 1 }}>
+                    📊 No Data Available
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', maxWidth: 400, mb: 2 }}>
+                    {selectedLocomotives.length === 0 
+                      ? 'Please select locomotive(s) to view performance data.'
+                      : 'No performance data found for the selected locomotives and date range.'
+                    }
+                  </Typography>
+                  {selectedLocomotives.length > 0 && (
+                    <Button 
+                      variant="outlined" 
+                      onClick={handleRefreshData}
+                      sx={{ 
+                        mt: 1, 
+                        textTransform: 'none',
+                        borderColor: '#2563eb',
+                        color: '#2563eb'
+                      }}
+                    >
+                      🔄 Retry
+                    </Button>
+                  )}
+                </Box>
+              )}
+            </Box>
           </Box>
         </CardContent>
       </Card>

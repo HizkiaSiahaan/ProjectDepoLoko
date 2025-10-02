@@ -165,7 +165,7 @@ const NotificationSection = () => {
                       <Chip size="small" variant="outlined" label="EARLIER" />
                     </ListSubheader>
                     {notifications.filter(n => n.status === 'Dibaca').length === 0 && (
-                      <ListItem><ListItemText primary="Tidak ada notifikasi lama" /></ListItem>
+                      <ListItem><ListItemText primary="(Coming Soon) Tidak ada notifikasi lama" /></ListItem>
                     )}
                     {notifications.filter(n => n.status === 'Dibaca').map((notif, idx) => (
                       <ListItemButton alignItems="flex-start" key={idx}>

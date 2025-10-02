@@ -359,6 +359,16 @@ export default function ManpowerDataManage() {
     setDetailTitle('');
   };
 
+  const formatTanggalJakarta = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   // Helper: flatten data if needed
   function normalizeManpowerData(data) {
     if (!data) return [];
@@ -640,7 +650,7 @@ export default function ManpowerDataManage() {
                         <TableCell>{row.nipp}</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>{row.nama}</TableCell>
                         <TableCell>{row.jabatan}</TableCell>
-                        <TableCell>{row.tmt_pensiun || '-'}</TableCell>
+                        <TableCell>{formatTanggalJakarta(row.tmt_pensiun || '-')}</TableCell>
                         <TableCell>{Array.isArray(row.diklat) && row.diklat.length > 0 ? 'Sudah' : 'Belum'}</TableCell>
                         <TableCell>{Array.isArray(row.sertifikasi) && row.sertifikasi.length > 0 ? (row.sertifikasi[0].status || '-') : '-'}</TableCell>
                       </TableRow>
@@ -706,15 +716,15 @@ export default function ManpowerDataManage() {
                           <TableCell>{row.nipp}</TableCell>
                           <TableCell>{row.nama}</TableCell>
                           <TableCell>{row.jabatan}</TableCell>
-                          <TableCell>{d.dto_prs || '-'}</TableCell>
-                          <TableCell>{d.dto_pms || '-'}</TableCell>
-                          <TableCell>{d.t2_prs || '-'}</TableCell>
-                          <TableCell>{d.t2_pms || '-'}</TableCell>
-                          <TableCell>{d.t3_prs || '-'}</TableCell>
-                          <TableCell>{d.t3_pms || '-'}</TableCell>
-                          <TableCell>{d.t4_mps || '-'}</TableCell>
-                          <TableCell>{d.smdp || '-'}</TableCell>
-                          <TableCell>{d.jmdp || '-'}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.dto_prs || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.dto_pms || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.t2_prs || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.t2_pms || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.t3_prs || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.t3_pms || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.t4_mps || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.smdp || '-')}</TableCell>
+                          <TableCell>{formatTanggalJakarta(d.jmdp || '-')}</TableCell>
                         </TableRow>
                       )) : (
                         <TableRow key={row.nipp + '-diklat-empty'}>

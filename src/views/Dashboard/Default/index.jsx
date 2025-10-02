@@ -3,18 +3,6 @@ import { Box, Typography, Grid, Card, CardContent, Button, Chip, Avatar, Stack, 
 
 import { useNotifications } from 'contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-
-const dummyAssets = [
-  { name: 'Lokomotif', status: 'Aktif' },
-  { name: 'Gerbong', status: 'Aktif' },
-  { name: 'Rel', status: 'Butuh Perawatan' },
-  { name: 'Sinyal', status: 'Rusak' },
-  { name: 'Suku Cadang', status: 'Aktif' }
-];
-const dummySchedules = [
-  { tanggal: '2025-07-03', jenis: 'Perawatan Rel', keterangan: 'Rel utama lintas A' }
-];
-
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import DirectionsRailwayFilledIcon from '@mui/icons-material/DirectionsRailwayFilled';
@@ -35,6 +23,18 @@ const featureCards = [
     icon: <AssessmentOutlinedIcon fontSize="large" color="primary" />,
     url: '/dashboard/action-plan',
     color: 'primary.main'
+  },
+  {
+    title: 'Fault History',
+    icon: <AssessmentOutlinedIcon fontSize="large" color="error" />,
+    url: '/dashboard/fault-history',
+    color: 'error.main'
+  },
+  {
+    title: 'Performance History',
+    icon: <TableChartOutlinedIcon fontSize="large" color="secondary" />,
+    url: '/dashboard/performance-history',
+    color: 'secondary.main'
   },
   {
     title: 'Pantauan Roda CC205',
@@ -88,12 +88,12 @@ const Default = () => {
           <Typography variant="subtitle1" sx={{ color: '#1e3a8a', mb: 1, fontWeight: 600, fontSize: 15 }}>
             Depo Lokomotif Divre IV Tanjung Karang PT. Kereta Api Indonesia (Persero)
           </Typography>
-          <Typography variant="body2" sx={{ color: '#334155', mb: 2, fontSize: 13, maxWidth: 420 }}>
+          <Typography variant="body2" sx={{ color: '#334155', mb: 2, fontSize: 13, maxWidth: 900 }}>
             Sistem Informasi Manajemen Lokomotif merupakan portal pemantauan dan pengelolaan data terintegrasi di Depo Lokomotif Divre IV Tanjung Karang, yang bertujuan untuk meningkatkan efisiensi, transparansi, dan ketepatan dalam perencanaan serta pemeliharaan sarana perkeretaapian.
           </Typography>
         </Box>
-        <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 180, textAlign: 'right' }}>
-          <img src={maskotSimloko} alt="Maskot SIMLOKO" style={{ height: 220, marginRight: 0 }} />
+        <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 150, textAlign: 'right' }}>
+          <img src={maskotSimloko} alt="Maskot SIMLOKO" style={{ height: 200, marginRight: 0 }} />
         </Box>
       </CardContent>
     </Card>

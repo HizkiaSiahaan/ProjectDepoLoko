@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
 const initialNotifications = [
-  { waktu: '2025-07-01 09:00', pesan: 'Jadwal perawatan Lokomotif #A01 hari ini', status: 'Belum Dibaca' },
+  { waktu: 'Segera', pesan: 'COMING SOON', status: 'Belum Dibaca' },
 ];
 
 const NotificationContext = createContext();

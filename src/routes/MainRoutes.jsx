@@ -15,6 +15,8 @@ const ComponentUsage = Loadable(lazy(() => import('views/Dashboard/ComponentUsag
 const PerformanceHistory = Loadable(lazy(() => import('views/Dashboard/PerformanceHistory')));
 
 const InputDataMultiKategori = Loadable(lazy(() => import('views/Dashboard/InputDataMultiKategori')));
+const TaskManagementAdmin = Loadable(lazy(() => import('views/Dashboard/TaskManagementAdmin')));
+const TaskManagementUser = Loadable(lazy(() => import('views/Dashboard/TaskManagementUser')));
 
 const LoginUser = Loadable(lazy(() => import('views/Auth/LoginUser')));
 const LoginAdmin = Loadable(lazy(() => import('views/Auth/LoginAdmin')));
@@ -79,6 +81,14 @@ const MainRoutes = [
     {
       path: 'performance-history',
       element: <PerformanceHistory />
+    },
+    {
+      path: 'task-management-admin',
+      element: <TaskManagementAdmin />
+    },
+    {
+      path: 'task-management-user',
+      element: <TaskManagementUser />
     }
   ]
   }

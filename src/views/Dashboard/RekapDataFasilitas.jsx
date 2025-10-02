@@ -51,6 +51,16 @@ export default function RekapDataFasilitas() {
     setOpenSioModal(true);
   };
 
+  const formatTanggalJakarta = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   // Handler untuk hapus
   const handleDeleteSio = async (id) => {
   if (!window.confirm('Yakin ingin menghapus data ini?')) return;
@@ -332,7 +342,7 @@ const categories = React.useMemo(() => {
                     <TableCell>{item.baik}</TableCell>
                     <TableCell>{item.pantauan}</TableCell>
                     <TableCell>{item.rusak}</TableCell>
-                    <TableCell>{item.tanggal_perawatan}</TableCell>
+                    <TableCell>{formatTanggalJakarta(item.tanggal_perawatan)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -537,7 +547,7 @@ const categories = React.useMemo(() => {
                         <TableCell align="center">{item.rusak ?? '-'}</TableCell>
                         <TableCell align="center">{item.tahun_pengadaan || '-'}</TableCell>
                         <TableCell align="center">{item.tahun_mulai_dinas || '-'}</TableCell>
-                        <TableCell align="center">{item.tanggal_perawatan || '-'}</TableCell>
+                        <TableCell align="center">{formatTanggalJakarta(item.tanggal_perawatan) || '-'}</TableCell>
                         <TableCell align="center">{item.kategori_standardisasi || '-'}</TableCell>
                         <TableCell align="center">{item.masa_berlaku || '-'}</TableCell>
                         <TableCell align="center">{item.spesifikasi || '-'}</TableCell>

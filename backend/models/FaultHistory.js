@@ -1,60 +1,84 @@
-// models/FaultHistory.js
+// models/FaultHistory.js - UPDATED for locomotive_number schema
 const pool = require('../db');
 
 class FaultHistory {
-  // Get fault history with filters and pagination
+  // ⚠️ UPDATED: Get fault history with filters and pagination (NO JOIN to locomotives)
   static async getAll(filters = {}) {
     const { 
       startDate, 
       endDate, 
-      locomotiveId, 
-      faultType, 
-      faultCode,
+      locomotiveNumbers = [], // ⚠️ CHANGED from locomotiveId to locomotiveNumbers array
+      faultTypes = [],        // ⚠️ CHANGED from faultType to faultTypes array
+      faultCodes = [],        // ⚠️ CHANGED from faultCode to faultCodes array
+      priorityLevels = [],    // ⚠️ NEW parameter
       page = 1, 
       limit = 50 
     } = filters;
   
     // Build WHERE conditions
-    let whereConditions = 'WHERE fh.date_occurred BETWEEN $1 AND $2';
+    let whereConditions = 'WHERE date_occurred BETWEEN $1 AND $2';
     const values = [startDate, endDate];
     let paramCount = 2;
   
-    if (locomotiveId) {
-      whereConditions += ` AND fh.locomotive_id = $${++paramCount}`;
-      values.push(locomotiveId);
+    // ⚠️ UPDATED: Filter by locomotive_number (array)
+    if (locomotiveNumbers.length > 0) {
+      const placeholders = locomotiveNumbers.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      whereConditions += ` AND locomotive_number IN (${placeholders})`;
+      values.push(...locomotiveNumbers);
+      paramCount += locomotiveNumbers.length;
     }
     
-    if (faultType) {
-      whereConditions += ` AND fh.fault_type = $${++paramCount}`;
-      values.push(faultType);
+    // ⚠️ UPDATED: Filter by fault_type (array)
+    if (faultTypes.length > 0) {
+      const placeholders = faultTypes.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      whereConditions += ` AND fault_type IN (${placeholders})`;
+      values.push(...faultTypes);
+      paramCount += faultTypes.length;
     }
     
-    if (faultCode) {
-      whereConditions += ` AND fh.fault_code = $${++paramCount}`;
-      values.push(faultCode);
+    // ⚠️ UPDATED: Filter by fault_code (array)
+    if (faultCodes.length > 0) {
+      const placeholders = faultCodes.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      whereConditions += ` AND fault_code IN (${placeholders})`;
+      values.push(...faultCodes);
+      paramCount += faultCodes.length;
+    }
+
+    // ⚠️ NEW: Filter by priority_level (array)
+    if (priorityLevels.length > 0) {
+      const placeholders = priorityLevels.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      whereConditions += ` AND priority_level IN (${placeholders})`;
+      values.push(...priorityLevels);
+      paramCount += priorityLevels.length;
     }
   
-    // Count query - use same WHERE conditions and values
+    // ⚠️ UPDATED: Count query (NO JOIN to locomotives)
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM fault_history fh
-      JOIN locomotives l ON fh.locomotive_id = l.id
+      FROM fault_history
       ${whereConditions}
     `;
   
     const countResult = await pool.query(countQuery, values);
     const total = parseInt(countResult.rows[0].total);
   
-    // Main query - use same WHERE conditions, then add pagination
+    // ⚠️ UPDATED: Main query (NO JOIN to locomotives, locomotive_number langsung dari fault_history)
     const query = `
       SELECT 
-        fh.*,
-        l.locomotive_number,
-        l.locomotive_series
-      FROM fault_history fh
-      JOIN locomotives l ON fh.locomotive_id = l.id
+        id,
+        locomotive_number,  -- ⚠️ Langsung dari fault_history, tidak perlu join
+        fault_type,
+        fault_code,
+        fault_description,
+        priority_level,
+        priority_description,
+        counter,
+        date_occurred,
+        created_at,
+        updated_at
+      FROM fault_history
       ${whereConditions}
-      ORDER BY fh.date_occurred DESC, fh.id DESC
+      ORDER BY date_occurred DESC, id DESC
       LIMIT $${++paramCount} OFFSET $${++paramCount}
     `;
   
@@ -72,47 +96,65 @@ class FaultHistory {
         totalPages: Math.ceil(total / parseInt(limit))
       }
     };
-  }  
+  }
 
-  // Get summary counters for filters
+  // ⚠️ UPDATED: Get summary counters for filters (NO JOIN to locomotives)
   static async getSummaryCounters(filters = {}) {
-    const { startDate, endDate, locomotiveId, faultType, faultCode } = filters;
+    const { 
+      startDate, 
+      endDate, 
+      locomotiveNumbers = [], 
+      faultTypes = [], 
+      faultCodes = [],
+      priorityLevels = []
+    } = filters;
 
     let baseWhere = 'WHERE date_occurred BETWEEN $1 AND $2';
     const values = [startDate, endDate];
     let paramCount = 2;
 
-    if (locomotiveId) {
-      baseWhere += ` AND locomotive_id = $${++paramCount}`;
-      values.push(locomotiveId);
+    // ⚠️ UPDATED: Build WHERE conditions for arrays
+    if (locomotiveNumbers.length > 0) {
+      const placeholders = locomotiveNumbers.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      baseWhere += ` AND locomotive_number IN (${placeholders})`;
+      values.push(...locomotiveNumbers);
+      paramCount += locomotiveNumbers.length;
     }
-    if (faultType) {
-      baseWhere += ` AND fault_type = $${++paramCount}`;
-      values.push(faultType);
+    if (faultTypes.length > 0) {
+      const placeholders = faultTypes.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      baseWhere += ` AND fault_type IN (${placeholders})`;
+      values.push(...faultTypes);
+      paramCount += faultTypes.length;
     }
-    if (faultCode) {
-      baseWhere += ` AND fault_code = $${++paramCount}`;
-      values.push(faultCode);
+    if (faultCodes.length > 0) {
+      const placeholders = faultCodes.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      baseWhere += ` AND fault_code IN (${placeholders})`;
+      values.push(...faultCodes);
+      paramCount += faultCodes.length;
+    }
+    if (priorityLevels.length > 0) {
+      const placeholders = priorityLevels.map((_, i) => `$${paramCount + i + 1}`).join(',');
+      baseWhere += ` AND priority_level IN (${placeholders})`;
+      values.push(...priorityLevels);
+      paramCount += priorityLevels.length;
     }
 
+    // ⚠️ UPDATED: Summary queries (NO JOIN to locomotives)
     const queries = {
       locomotives: `
         SELECT 
-          l.id,
-          l.locomotive_number,
-          l.locomotive_series,
+          locomotive_number,
           COUNT(*) as counter
-        FROM fault_history fh
-        JOIN locomotives l ON fh.locomotive_id = l.id
+        FROM fault_history
         ${baseWhere}
-        GROUP BY l.id, l.locomotive_number, l.locomotive_series
+        GROUP BY locomotive_number
         ORDER BY counter DESC
       `,
       faultTypes: `
         SELECT 
           fault_type,
           COUNT(*) as counter
-        FROM fault_history fh
+        FROM fault_history
         ${baseWhere}
         GROUP BY fault_type
         ORDER BY counter DESC
@@ -122,7 +164,7 @@ class FaultHistory {
           fault_code,
           fault_description,
           COUNT(*) as counter
-        FROM fault_history fh
+        FROM fault_history
         ${baseWhere}
         GROUP BY fault_code, fault_description
         ORDER BY counter DESC
@@ -138,50 +180,72 @@ class FaultHistory {
     return results;
   }
 
-  // Calculate next counter for locomotive + fault_code combination
-  static async getNextCounter(locomotiveId, faultCode) {
+  // ⚠️ UPDATED: Calculate next counter for locomotive_number + fault_code combination
+  static async getNextCounter(locomotiveNumber, faultCode) {
     const query = `
       SELECT COALESCE(MAX(counter), 0) + 1 as next_counter
       FROM fault_history 
-      WHERE locomotive_id = $1 AND fault_code = $2
+      WHERE locomotive_number = $1 AND fault_code = $2
     `;
-    const result = await pool.query(query, [locomotiveId, faultCode]);
+    const result = await pool.query(query, [locomotiveNumber, faultCode]);
     return result.rows[0].next_counter;
   }
 
-  // Insert new fault record
+  // ⚠️ UPDATED: Insert new fault record (NO locomotive lookup needed!)
   static async create(faultData) {
     const {
-      locomotiveId,
-      dateOccurred,
-      faultType,
-      faultCode,
-      faultDescription,
-      priorityLevel,
-      priorityDescription,
-      delta
+      locomotive_number,    // ⚠️ Direct locomotive_number (no lookup needed)
+      date_occurred,
+      fault_type,
+      fault_code,
+      fault_description,
+      priority_level,
+      priority_description,
+      counter              // ⚠️ Counter bisa dari CSV atau auto-generate
     } = faultData;
 
-    // Get next counter for this locomotive + fault_code combination
-    const counter = await this.getNextCounter(locomotiveId, faultCode);
+    // ⚠️ Get next counter jika tidak ada di CSV
+    const finalCounter = counter || await this.getNextCounter(locomotive_number, fault_code);
 
     const query = `
       INSERT INTO fault_history (
-        locomotive_id, date_occurred, fault_type, fault_code, 
-        fault_description, priority_level, priority_description, 
-        counter, delta
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        locomotive_number,  -- ⚠️ Direct insert locomotive_number
+        date_occurred, 
+        fault_type, 
+        fault_code, 
+        fault_description, 
+        priority_level, 
+        priority_description, 
+        counter
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *
     `;
 
     const values = [
-      locomotiveId, dateOccurred, faultType, faultCode,
-      faultDescription, priorityLevel, priorityDescription,
-      counter, delta
+      locomotive_number,    // ⚠️ Direct value
+      date_occurred, 
+      fault_type, 
+      fault_code,
+      fault_description, 
+      priority_level, 
+      priority_description,
+      finalCounter
     ];
 
     const result = await pool.query(query, values);
     return result.rows[0];
+  }
+
+  // ⚠️ NEW: Get distinct locomotives dari fault_history table
+  static async getDistinctLocomotives() {
+    const query = `
+      SELECT DISTINCT locomotive_number
+      FROM fault_history
+      WHERE locomotive_number IS NOT NULL AND locomotive_number != ''
+      ORDER BY locomotive_number
+    `;
+    const result = await pool.query(query);
+    return result.rows.map(row => row.locomotive_number);
   }
 
   // Get distinct fault types
@@ -208,16 +272,23 @@ class FaultHistory {
     return result.rows;
   }
 
-  // Get fault history by ID
+  // ⚠️ UPDATED: Get fault history by ID (NO JOIN to locomotives)
   static async getById(id) {
     const query = `
       SELECT 
-        fh.*,
-        l.locomotive_number,
-        l.locomotive_series
-      FROM fault_history fh
-      JOIN locomotives l ON fh.locomotive_id = l.id
-      WHERE fh.id = $1
+        id,
+        locomotive_number,  -- ⚠️ Langsung dari fault_history
+        fault_type,
+        fault_code,
+        fault_description,
+        priority_level,
+        priority_description,
+        counter,
+        date_occurred,
+        created_at,
+        updated_at
+      FROM fault_history
+      WHERE id = $1
     `;
     const result = await pool.query(query, [id]);
     return result.rows[0];
@@ -263,8 +334,8 @@ class FaultHistory {
     return result.rows[0];
   }
 
-  // Get fault statistics for a specific locomotive
-  static async getLocomotiveStats(locomotiveId, startDate, endDate) {
+  // ⚠️ UPDATED: Get fault statistics for a specific locomotive (use locomotive_number)
+  static async getLocomotiveStats(locomotiveNumber, startDate, endDate) {
     const query = `
       SELECT 
         COUNT(*) as total_faults,
@@ -274,13 +345,13 @@ class FaultHistory {
         fault_type,
         COUNT(*) as fault_count
       FROM fault_history
-      WHERE locomotive_id = $1 
+      WHERE locomotive_number = $1 
         AND date_occurred BETWEEN $2 AND $3
       GROUP BY fault_type
       ORDER BY fault_count DESC
     `;
     
-    const result = await pool.query(query, [locomotiveId, startDate, endDate]);
+    const result = await pool.query(query, [locomotiveNumber, startDate, endDate]);
     return result.rows;
   }
 
@@ -291,7 +362,7 @@ class FaultHistory {
         fault_code,
         fault_description,
         COUNT(*) as occurrence_count,
-        COUNT(DISTINCT locomotive_id) as affected_locomotives
+        COUNT(DISTINCT locomotive_number) as affected_locomotives  -- ⚠️ Use locomotive_number
       FROM fault_history
       WHERE date_occurred >= CURRENT_DATE - INTERVAL '${days} days'
       GROUP BY fault_code, fault_description
@@ -300,6 +371,24 @@ class FaultHistory {
     `;
     
     const result = await pool.query(query, [limit]);
+    return result.rows;
+  }
+
+  // ⚠️ NEW: Get priority level statistics
+  static async getPriorityStats(startDate, endDate) {
+    const query = `
+      SELECT 
+        priority_level,
+        priority_description,
+        COUNT(*) as count,
+        COUNT(DISTINCT locomotive_number) as affected_locomotives
+      FROM fault_history
+      WHERE date_occurred BETWEEN $1 AND $2
+      GROUP BY priority_level, priority_description
+      ORDER BY priority_level
+    `;
+    
+    const result = await pool.query(query, [startDate, endDate]);
     return result.rows;
   }
 }

@@ -57,6 +57,15 @@ const teamIcons = {
   'TIM TRUCK': <DirectionsBusFilledIcon sx={{ fontSize: 50, color: '#607d8b' }} />,
 };
 
+const formatTanggalJakarta = (dateStr) => {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
 // teams akan diinisialisasi di dalam komponen agar bisa akses state
 
 
@@ -71,10 +80,6 @@ function getAchievement(data) {
 // Data detail aktivitas per tim kini diambil dari actionPlanData (bukan dummy)
 // Evidence akan diambil dari field foto_path/foto jika ada di backend, jika tidak tampilkan '-'.
 
-
-
-
-
 function ActionPlanDashboard() {
   const [actionPlanData, setActionPlanData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +93,79 @@ function ActionPlanDashboard() {
     return actionPlanData.filter(row => row.pic === team);
   }
   
+  // === PLAN DICTIONARY ===
+  const planDict = {
+    "Penggantian Slip Ring (Stainless Steel)": 85,
+    "Penambahan Brush Holder 1 Set": 50,
+    "Pengukuran dan Penggantian Carbon Brush (Standar 42 mm)": 85,
+    "Inspeksi dan Pemeriksaan Motor Blower (Dial & Shaking)": 85,
+    "Penggantian Bearing Setiap 1,5 Tahun": 85,
+    "Join Inspection dengan DC THN": 85,
+    "21 serie Modifikasi bearing housing kedua sisi": 35,
+    "Penggantian Impeler (21 Series) dengan bahan yang lebih ringan": 35,
+    "Flushing Fuel Setiap Perawatan": 85,
+    "Drain BBM 1L setiap Perawatan": 85,
+    "Pemeriksaan Ring Piston Setiap P3": 85,
+    "Pemeriksaan Piston Cooling Pipe Pada Saat Perawatan Pertama di 2025": 85,
+    "Pemeriksaan & Inspeksi Piston Cooling Pipe & Seal P12": 85,
+    "Instal Ulang Software IPM P12": 66,
+    "Pengecekan kondisi IPM & Test Air Brake": 85,
+    "Periksa dan Pembersihan Komponen Internal IPM setiap 3 Tahun": 85,
+    "Memastikan proses pengelasan sesuai Prosedur dari PRL": 85,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan IPM": 85,
+    "Instal Ulang Software EM2000 setiap 3 Tahun": 14,
+    "Pengecekan & Pembersihan EM2000": 85,
+    "Recycle ALL CB sampai Battery tunggu 1 Minute P1": 85,
+    "Pemeriksaan dan Pengamanan Kabel Traction Alternator dari Cacat atau Rubbing": 85,
+    "Pemasangan Cooling Fan pada PSM Compartment": 51,
+    "Pengecekan dan Pembersihan kondisi PSM": 85,
+    "Reposisi Resistor oleh PRL": 85,
+    "Pengecekan kabel High Voltage pada CT A,B,C di Alternator": 85,
+    "Pengecekan shield kabel PSM": 85,
+    "Inspeksi Sistem Pendingan E Locker Setiap Perawatan": 85,
+    "Melakukan Pengecekan, Pembersihan Phase Module seluruh lokomotif": 85,
+    "Periksa sikuit dari ground setiap Perawatan": 85,
+    "Instal Ulang Software PCM 500 setiap 3 Tahun": 14,
+    "Pengecekan & Pembersihan PCM 500 Setiap Perawatan": 85,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan": 85,
+    "Pemeriksaan Low Voltage Ground setiap bulan": 85,
+    "Periksa ground AC setiap perawatan": 85,
+    "Pengecekan fungsi dan kondisi CLOPS setiap Bulan": 85,
+    "Pengecekan Kebocoran & Volume Pelumas setiap Bulan": 85,
+    "Pemeriksaan Kondisi Terminal EFCO L & R Setiap Perawatan": 85,
+    "Pengecekan & Penggantian Matras EFCO": 85,
+    "Pengecekan semua kondisi Pipa Water Pump setiap Bulan": 85,
+    "Melakukan Pemantauan tekanan in dan out melalui Parameter Uptime": 85,
+    "Pengecekan dan Penggantian Mur (Jika Sudah Maksimal)": 85,
+    "Pemeriksaan Posisi Coupling setiap Bulan": 85,
+    "Pengecekan Semua Kondisi Flexible Hose setiap Bulan": 85,
+    "Penggantian setiap 3 Tahun": 14,
+    "Pengecekan semua kondisi PLUG PD2": 85,
+    "Pemeriksaan Kondisi BPCP setiap Bulan": 85,
+    "Reload EPCU Software P36": 14,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan BPCP": 85,
+    "Drain Manual MR setiap Bulan": 85,
+    "Instal Ulang MPU Setiap setiap 3 Tahun": 14,
+    "Pengecekan dan Pembersihan MPU setiap perawatan": 85,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan MPU": 85,
+    "Pengecekan dan Pembersihan PSU 500 Setiap Perawatan": 85,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan PSU 500": 85,
+    "Pemeriksaan Kondisi Turbocharger (Mur, Baut, TPURPM)": 85,
+    "Pemeriksaan GAP Clearence Impeler Air Inlet Setiap Perawatan": 85,
+    "Pengecekan dan pengukuran Fuel Pump Setiap Perawatan": 85,
+    "Flushing Fuel Setiap Perawatan (FP)": 85,
+    "Pengecekan dan Penggantian Komponen Wiper (Blade, Cup Nut, Baut) setiap Bulan": 85,
+    "Setup Langkah Blade setiap Bulan": 85,
+    "Pengecekan Semua Komponen Pemasir": 85,
+    "Pengecekan dan Pembersihan MPIO Setiap Perawatan": 85,
+    "Recyce ALL CB sampai Battery tunggu 1 Minute setiap Bulan MPIO": 85,
+    "Reload EPCU Software setiap 36 Bulan (MPIO)": 14,
+    "Pengecekan Semua Kondisi Relay GR & Koneksinya": 85,
+    "Melakukan Ground Test semua lokomotif saat perawatan": 85,
+    "Melakukan Pengukuran Roda Periode 1 Bulan": 85
+    // ...tambahkan semua leading indicator lain sesuai kebutuhan
+  };
+
   // Fetch data dari backend saat mount
   React.useEffect(() => {
     const fetchActionPlan = async () => {
@@ -107,28 +185,68 @@ function ActionPlanDashboard() {
     fetchActionPlan();
   }, []);
 
-  // Fungsi hitung progres per tim
-  function getTeamPercent(teamName) {
-    const data = actionPlanData.filter(d => d.pic === teamName);
-    if (!data.length) return 0;
-    const totalPlan = data.reduce((a, b) => a + b.plan, 0);
-    const totalActual = data.reduce((a, b) => a + b.actual, 0);
-    return Number(Math.min((totalActual / totalPlan) * 100, 100).toFixed(2));
+  // AGGREGASI MAIN TABLE: Group by [pic, komponen, aktivitas, detail_aktivitas]
+  function aggregateMainTable(data) {
+    const map = new Map();
+    data.forEach(row => {
+      const key = [row.pic, row.komponen, row.aktivitas, row.detail_aktivitas].join('||');
+      if (!map.has(key)) {
+        map.set(key, {
+          pic: row.pic,
+          komponen: row.komponen,
+          aktivitas: row.aktivitas,
+          detail_aktivitas: row.detail_aktivitas,
+          plan: planDict[row.detail_aktivitas] || '-',
+          actual: 1
+        });
+      } else {
+        map.get(key).actual += 1;
+      }
+    });
+    return Array.from(map.values());
   }
 
-  // Fungsi total plan/actual per tim
+  const mainTableData = React.useMemo(() => aggregateMainTable(actionPlanData || []), [actionPlanData]);
+
+  // const teamspic = React.useMemo(() => {
+  //   const list = [...new Set(mainTableData.map(d => d.pic).filter(Boolean))];
+  //   if (list.length) return list;
+  //   return [
+  //     'TIM FLYING GANG','TIM REVISI','TIM ELEKTRIK','TIM ENGINE','TIM ANGIN','TIM PRL','TIM SELF TEST','TIM TRUCK'
+  //   ];
+  // }, [mainTableData]);
+
+  
+  const getTeamStats = (teamName) => {
+    const rows = mainTableData.filter(d => d.pic === teamName);
+    const totalPlan = rows.reduce((sum, r) => sum + (parseInt(r.plan, 10) || 0), 0);
+    const totalActual = rows.reduce((sum, r) => sum + (parseInt(r.actual, 10) || 0), 0);
+    const percent = totalPlan > 0 ? Math.round((totalActual / totalPlan) * 100) : 0;
+    return { plan: totalPlan, actual: totalActual, percent };
+  };
+
+  // Fungsi hitung progres per tim (pakai mainTableData)
+  function getTeamPercent(teamName) {
+    const data = mainTableData.filter(d => d.pic === teamName);
+    if (!data.length) return 0;
+    const totalPlan = data.reduce((a, b) => a + (typeof b.plan === 'number' ? b.plan : 0), 0);
+    const totalActual = data.reduce((a, b) => a + b.actual, 0);
+    return Number(Math.min((totalActual / (totalPlan || 1)) * 100, 100).toFixed(2));
+  } 
+
+  // Fungsi total plan/actual per tim (pakai mainTableData)
   function getTeamTotal(teamName) {
-    const data = actionPlanData.filter(d => d.pic === teamName);
+    const data = mainTableData.filter(d => d.pic === teamName);
     return {
-      plan: data.reduce((a, b) => a + b.plan, 0),
+      plan: data.reduce((a, b) => a + (typeof b.plan === 'number' ? b.plan : 0), 0),
       actual: data.reduce((a, b) => a + b.actual, 0)
     };
   }
 
-  // Fungsi achievement
+  // Fungsi achievement (pakai mainTableData)
   function getAchievement(data) {
     if (!data.length) return 0;
-    const totalPlan = data.reduce((a, b) => a + b.plan, 0);
+    const totalPlan = data.reduce((a, b) => a + (typeof b.plan === 'number' ? b.plan : 0), 0);
     const totalActual = data.reduce((a, b) => a + b.actual, 0);
     const achievement = totalPlan ? (totalActual / totalPlan) * 100 : 0;
     return Math.min(achievement, 100).toFixed(2); // Ensure max 100%
@@ -145,9 +263,45 @@ function ActionPlanDashboard() {
     { name: 'TIM SELF TEST', percent: getTeamPercent('TIM SELF TEST'), color: '#ff5722' },
     { name: 'TIM TRUCK', percent: getTeamPercent('TIM TRUCK'), color: '#607d8b' }
   ];
+  
+  // === Mapping warna tim ===
+  const teamColors = {
+    'TIM FLYING GANG': '#4CAF50',
+    'TIM REVISI': '#4CAF50',
+    'TIM ELEKTRIK': '#FFC107',
+    'TIM ENGINE': '#1976d2',
+    'TIM ANGIN': '#00bcd4',
+    'TIM PRL': '#8e24aa',
+    'TIM SELF TEST': '#ff5722',
+    'TIM TRUCK': '#607d8b'
+  };
+  
+  // === Daftar tim dengan style ===
+  const baseTeamNames = [
+  'TIM FLYING GANG',
+  'TIM REVISI',
+  'TIM ELEKTRIK',
+  'TIM ENGINE',
+  'TIM ANGIN',
+  'TIM PRL',
+  'TIM SELF TEST',
+  'TIM TRUCK',
+];
+const teamspic = React.useMemo(() => {
+  return baseTeamNames.map(name => {
+    const stats = getTeamStats(name);
+    return {
+      name,
+      percent: stats.percent,
+      color: teamColors[name] || '#9e9e9e'
+    };
+  });
+}, [mainTableData]);
 
   // Get unique components for filter
   const uniqueComponents = [...new Set(actionPlanData.map(item => item.komponen))].sort();
+  
+
 
   // Handle component filter change
   const handleComponentFilterChange = (component) => {
@@ -175,28 +329,43 @@ function ActionPlanDashboard() {
     return teamMatch && componentMatch;
   });
 
+  // Bar + Line chart data (Plan, Actual, Realisasi %)
+  // Aggregate data per unique komponen
+  const uniqueKomponen = [...new Set(filteredData.map(d => d.komponen))];
+  const komponenAgg = uniqueKomponen.map(komponen => {
+    const rows = filteredData.filter(d => d.komponen === komponen);
+    // Sum plan dari planDict atau row.plan
+    const plan = rows.reduce((sum, row) => sum + (planDict[row.detail_aktivitas] !== undefined ? planDict[row.detail_aktivitas] : (typeof row.plan === 'number' ? row.plan : 0)), 0);
+    // Sum actual: jumlah data dengan komponen tsb
+    const actual = rows.length;
+    // Percent
+    const percent = plan > 0 ? Math.min((actual / plan) * 100, 100) : 0;
+    return { komponen, plan, actual, percent: Number(percent.toFixed(2)) };
+  });
+
   // Achievement data
-  const achievement = getAchievement(filteredData);
-  
+  const totalPlan = komponenAgg.reduce((sum, d) => sum + (typeof d.plan === 'number' ? d.plan : 0), 0);
+  const totalActual = komponenAgg.reduce((sum, d) => sum + (typeof d.actual === 'number' ? d.actual : 0), 0);
+  const achievement = totalPlan > 0 ? Math.min((totalActual / totalPlan) * 100, 100) : 0;
+
   // Pie chart data (max 100%)
   const pieData = {
-    labels: ['Achievement', 'Remaining'],
-    datasets: [{
-      data: [achievement, 100 - achievement],
-      backgroundColor: ['#2196f3', '#ff5757'],
-      borderWidth: 0,
-      cutout: '70%'
-    }]
-  };
-
-  // Bar + Line chart data (Plan, Actual, Realisasi %)
+  labels: ['Achievement', 'Remaining'],
+  datasets: [{
+    data: [parseFloat(achievement.toFixed(1)), parseFloat((100 - achievement).toFixed(1))],
+    backgroundColor: ['#2196f3', '#ff5757'],
+    borderWidth: 0,
+    cutout: '70%'
+  }]
+};
+  
   const barData = {
-    labels: filteredData.map((d) => d.komponen),
+    labels: uniqueKomponen,
     datasets: [
       {
         type: 'bar',
         label: 'Plan',
-        data: filteredData.map((d) => d.plan),
+        data: komponenAgg.map(d => d.plan),
         backgroundColor: '#ff5757',
         borderRadius: 2,
         barPercentage: 0.5,
@@ -204,7 +373,7 @@ function ActionPlanDashboard() {
       {
         type: 'bar',
         label: 'Actual',
-        data: filteredData.map((d) => d.actual),
+        data: komponenAgg.map((d) => d.actual),
         backgroundColor: '#2196f3',
         borderRadius: 2,
         barPercentage: 0.5,
@@ -212,7 +381,7 @@ function ActionPlanDashboard() {
       {
         type: 'line',
         label: 'Realisasi',
-        data: filteredData.map((d) => {
+        data: komponenAgg.map((d) => {
           if (typeof d.actual === 'number' && typeof d.plan === 'number' && d.plan > 0) {
             return Math.min((d.actual / d.plan) * 100, 100);
           }
@@ -321,7 +490,7 @@ function ActionPlanDashboard() {
                   textAlign: 'center'
                 }}>
                   <Typography variant="h4" fontWeight={700} color="primary">
-                    {achievement}%
+                    {parseFloat(achievement.toFixed(1))}%
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Tercapai
@@ -343,7 +512,6 @@ function ActionPlanDashboard() {
             </CardContent>
           </Card>
         </Grid>
-
         
 
         {/* Tabel Action Plan Komponen */}
@@ -420,25 +588,28 @@ function ActionPlanDashboard() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {filteredData.map((row, idx) => (
+                    {[...new Map(filteredData.map(row => [row.detail_aktivitas, row])).values()].map((row, idx) => (
                       <TableRow key={idx} sx={{ bgcolor: idx % 2 === 0 ? '#f5f7fa' : '#fff' }}>
                         <TableCell sx={{ fontSize: 12, py: 0.5 }}>{idx+1}</TableCell>
                         <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.komponen}</TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.lagging || 'Contoh lagging...'}</TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.leading || 'Contoh leading...'}</TableCell>
+                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.aktivitas || '-'}</TableCell>
+                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.detail_aktivitas || '-'}</TableCell>
                         <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.target || 'Setiap Perawatan'}</TableCell>
                         <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.pic}</TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.plan}</TableCell>
-                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{row.actual}</TableCell>
+                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{planDict[row.detail_aktivitas] !== undefined ? planDict[row.detail_aktivitas] : (row.plan || '-')}</TableCell>
+                        <TableCell sx={{ fontSize: 12, py: 0.5 }}>{actionPlanData.filter(r => r.detail_aktivitas === row.detail_aktivitas).length}</TableCell>
                         <TableCell sx={{ fontSize: 12, py: 0.5 }}>
                           {(() => {
+                            // Ambil actual dan plan sesuai logic terbaru
+                            const actual = actionPlanData.filter(r => r.detail_aktivitas === row.detail_aktivitas).length;
+                            const plan = planDict[row.detail_aktivitas] !== undefined ? planDict[row.detail_aktivitas] : (typeof row.plan === 'number' ? row.plan : undefined);
                             let percent = 0;
-                            if (typeof row.actual === 'number' && typeof row.plan === 'number' && row.plan > 0) {
-                              percent = Math.min((row.actual / row.plan) * 100, 100);
+                            if (typeof plan === 'number' && plan > 0) {
+                              percent = Math.min((actual / plan) * 100, 100);
                               percent = Number(percent.toFixed(2));
                             }
                             return (
-                              <Chip 
+                              <Chip
                                 label={percent + '%'}
                                 color={percent >= 90 ? 'success' : percent >= 70 ? 'warning' : 'error'}
                                 sx={{ fontWeight: 700, fontSize: 12, height: 22 }}
@@ -461,7 +632,7 @@ function ActionPlanDashboard() {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={600} mb={2}>PERFORMA TIAP TIM</Typography>
               <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
-                {teams.map((team, index) => (
+                {teamspic.map((team, index) => (
                   <Card 
                     key={team.name}
                     variant="outlined"
@@ -549,27 +720,27 @@ function ActionPlanDashboard() {
                     <TableCell sx={{ fontWeight: 700 }}>Tanggal</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>No Loko</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Komponen</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>Aktivitas</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>Detail Aktivitas</TableCell>
                     <TableCell sx={{ fontWeight: 700 }}>Evidence</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-  {getTeamActivities(selectedTeam).map((row, idx) => (
-    <TableRow key={idx}>
-      <TableCell>{row.tanggal || row.tanggal_aktivitas || row.target_date || '-'}</TableCell>
-      <TableCell>{row.noLoko || row.nomor_lokomotif || '-'}</TableCell>
-      <TableCell>{row.komponen || '-'}</TableCell>
-      <TableCell>{row.aktivitas || row.keterangan || '-'}</TableCell>
-      <TableCell>
-        {row.foto_path ? (
-          <img src={row.foto_path} alt="evidence" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} />
-        ) : (
-          row.foto ? <img src={row.foto} alt="evidence" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} /> : '-'
-        )}
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
+                {getTeamActivities(selectedTeam).map((row, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>{formatTanggalJakarta(row.tanggal || row.tanggal_aktivitas || row.target_date || '-')}</TableCell>
+                    <TableCell>{row.noLoko || row.nomor_lokomotif || '-'}</TableCell>
+                    <TableCell>{row.komponen || '-'}</TableCell>
+                    <TableCell>{row.aktivitas || row.keterangan || '-'}</TableCell>
+                    <TableCell>
+                      {row.foto_path ? (
+                        <img src={row.foto_path} alt="evidence" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} />
+                      ) : (
+                        row.foto ? <img src={row.foto} alt="evidence" style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4 }} /> : '-'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                </TableBody>
               </Table>
             </TableContainer>
             {getTeamActivities(selectedTeam).length === 0 && (

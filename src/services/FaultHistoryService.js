@@ -1,4 +1,4 @@
-// services/FaultHistoryService.js
+// services/FaultHistoryService.js - UPDATED for locomotive_number schema
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 class FaultHistoryService {
@@ -98,12 +98,12 @@ class FaultHistoryService {
   }
 
   /**
-   * Get all locomotives for dropdown
+   * ⚠️ UPDATED: Get locomotives dari fault_history table (bukan dari table locomotives)
    */
   static async getLocomotives() {
     try {
       const url = `${API_BASE_URL}/fault-history/locomotives`;
-      console.log('📡 Fetching locomotives:', url);
+      console.log('📡 Fetching locomotives from fault_history:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -122,7 +122,14 @@ class FaultHistoryService {
         throw new Error(result.message || 'Failed to fetch locomotives');
       }
 
-      return result.data || [];
+      // ⚠️ Transform data untuk sesuai dengan format yang diharapkan frontend
+      // Backend return: ['CC205 13 18', 'CC205 21 27', ...]
+      // Frontend expect: [{ locomotive_number: 'CC205 13 18' }, ...]
+      const locomotives = result.data.map(locoNumber => ({
+        locomotive_number: locoNumber
+      }));
+
+      return locomotives;
 
     } catch (error) {
       console.error('❌ Error fetching locomotives:', error);
@@ -202,7 +209,7 @@ class FaultHistoryService {
   static async importCSV(file) {
     try {
       const formData = new FormData();
-      formData.append('csvFile', file);
+      formData.append('csvFile', file); // ⚠️ Make sure parameter name matches backend
 
       console.log('📡 Uploading CSV file:', file.name);
 
@@ -253,7 +260,7 @@ class FaultHistoryService {
   }
 
   /**
-   * Build filters object for API from component state
+   * ⚠️ UPDATED: Build filters object for API dari component state (sesuai dengan parameter backend yang baru)
    */
   static buildFilters({
     startDate,
@@ -278,20 +285,21 @@ class FaultHistoryService {
       filters.endDate = this.formatDateForAPI(endDate);
     }
 
-    // Add selection filters
+    // ⚠️ UPDATED: Parameter names sesuai dengan backend yang baru
     if (selectedLocos.length > 0) {
-      filters.locomotiveNumbers = selectedLocos;
+      filters.locomotiveNumbers = selectedLocos; // ⚠️ CHANGED from locomotiveIds to locomotiveNumbers
     }
     if (selectedFaultTypes.length > 0) {
-      filters.faultTypes = selectedFaultTypes;
+      filters.faultTypes = selectedFaultTypes; // ⚠️ CHANGED from faultType to faultTypes
     }
     if (selectedFaultCodes.length > 0) {
-      filters.faultCodes = selectedFaultCodes;
+      filters.faultCodes = selectedFaultCodes; // ⚠️ CHANGED from faultCode to faultCodes
     }
     if (selectedPriorityLevels.length > 0) {
-      filters.priorityLevels = selectedPriorityLevels;
+      filters.priorityLevels = selectedPriorityLevels; // ⚠️ NEW parameter
     }
 
+    console.log('🔧 Built filters for API:', filters);
     return filters;
   }
 }
